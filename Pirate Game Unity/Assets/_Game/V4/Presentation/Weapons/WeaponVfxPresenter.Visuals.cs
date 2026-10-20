@@ -310,6 +310,9 @@ namespace RoguePirates.V4.Presentation.Weapons
         void PrewarmRings()
         {
             if (HazardRings == null) return;
+            // V5 (visual prefabs): the items' landing ring (the Leviathan Heart's), prewarmed with the weapons'.
+            var itemRing = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.ItemRing, RoguePirates.V4.Presentation.Visuals.Visual.LandingRing);
+            if (itemRing != null) HazardRings.PrewarmTimed(itemRing, 4);
             foreach (var (prefab, count) in _ringPrewarm) HazardRings.PrewarmTimed(prefab, count);
             _ringPrewarm.Clear();
             if (_patchRing != null) HazardRings.UsePatchRing(_patchRing);

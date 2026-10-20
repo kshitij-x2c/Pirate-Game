@@ -237,19 +237,45 @@ namespace RoguePirates.V4.Presentation.Pvp
             UiKit.ButtonIcon(menu, "Icon_House", 30f);
         }
 
+        // V5 (visual prefabs): the 1v1's pieces from the visual catalog (Pvp/: the storm ring, the barrels, the bot's
+        // cannonball, the edge arrow, the opponent's ship), each else code-built as before.
+        static GameObject Prefab(string id, string visual) => RoguePirates.V4.Presentation.Visuals.VisualPick.Get(id, visual);
+
         void BuildRing()
         {
+            // The cannonballs' trails share this material (code-built balls); a ring prefab brings its own.
+            _ringMaterial = new Material(Shader.Find("Sprites/Default"));
+            var prefab = Prefab(RoguePirates.V4.Presentation.Visuals.VisualIds.PvpStormRing, RoguePirates.V4.Presentation.Visuals.Visual.Ring);
+            if (prefab != null && prefab.GetComponent<LineRenderer>() != null)
+            {
+                var own = Instantiate(prefab, _world, false);
+                own.name = "PvpStormRing";
+                _ring = own.GetComponent<LineRenderer>();
+                _ring.useWorldSpace = true;
+                _ring.loop = true;
+                _ring.positionCount = 128;
+                _ringHeight = 0.4f + RoguePirates.V4.Presentation.Visuals.VisualTuning.Height(prefab);
+                return;
+            }
             var go = new GameObject("PvpStormRing");
             go.transform.SetParent(_world, false);
             _ring = go.AddComponent<LineRenderer>();
-            _ring.useWorldSpace = true;
-            _ring.loop = true;
-            _ring.positionCount = 128;
-            _ring.widthMultiplier = 1.2f;
-            _ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _ringMaterial = new Material(Shader.Find("Sprites/Default"));
+            ConfigureRing(_ring);
             _ring.material = _ringMaterial;
-            _ring.startColor = _ring.endColor = StormColor;
+        }
+
+        float _ringHeight = 0.4f;
+
+        /// <summary>The 1v1 storm ring's line settings as the code makes it (the visual prefab builder saves it, with a
+        /// Sprites/Default material asset, as Pvp/pvp_storm_ring/pvp_storm_ring_Ring.prefab).</summary>
+        public static void ConfigureRing(LineRenderer ring)
+        {
+            ring.useWorldSpace = true;
+            ring.loop = true;
+            ring.positionCount = 128;
+            ring.widthMultiplier = 1.2f;
+            ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ring.startColor = ring.endColor = StormColor;
         }
 
         // ---- Frame ----
@@ -312,7 +338,7 @@ namespace RoguePirates.V4.Presentation.Pvp
             for (var i = 0; i < _ring.positionCount; i++)
             {
                 var a = i * Mathf.PI * 2f / _ring.positionCount;
-                _ring.SetPosition(i, new Vector3(c.x + Mathf.Sin(a) * r, 0.4f, c.z + Mathf.Cos(a) * r));
+                _ring.SetPosition(i, new Vector3(c.x + Mathf.Sin(a) * r, _ringHeight, c.z + Mathf.Cos(a) * r));
             }
         }
 
@@ -327,8 +353,10 @@ namespace RoguePirates.V4.Presentation.Pvp
                     go = BarrelModel(b.Xp);
                     _barrels[b.Id] = go;
                 }
-                go.transform.position = b.World + Vector3.up * (0.6f + Mathf.Sin(Time.time * 2f + b.Id) * 0.25f);
-                go.transform.Rotate(0f, 60f * Time.deltaTime, 0f, Space.World);
+                var p = Prefab(b.Xp ? RoguePirates.V4.Presentation.Visuals.VisualIds.PvpXpBarrel : RoguePirates.V4.Presentation.Visuals.VisualIds.PvpHealthBarrel, RoguePirates.V4.Presentation.Visuals.Visual.Barrel);
+                go.transform.position = b.World + Vector3.up * (0.6f + RoguePirates.V4.Presentation.Visuals.VisualTuning.Height(p)
+                    + Mathf.Sin(Time.time * 2f * RoguePirates.V4.Presentation.Visuals.VisualTuning.PulseSpeed(p) + b.Id) * 0.25f * RoguePirates.V4.Presentation.Visuals.VisualTuning.Pulse(p));
+                go.transform.Rotate(0f, 60f * RoguePirates.V4.Presentation.Visuals.VisualTuning.Spin(p) * Time.deltaTime, 0f, Space.World);
             }
             List<int> gone = null;
             foreach (var kv in _barrels) if (!live.Contains(kv.Key)) (gone ??= new List<int>()).Add(kv.Key);
@@ -337,21 +365,38 @@ namespace RoguePirates.V4.Presentation.Pvp
 
         GameObject BarrelModel(bool xp)
         {
-            var root = new GameObject(xp ? "PvpXpBarrel" : "PvpHealthBarrel");
+            var prefab = Prefab(xp ? RoguePirates.V4.Presentation.Visuals.VisualIds.PvpXpBarrel : RoguePirates.V4.Presentation.Visuals.VisualIds.PvpHealthBarrel, RoguePirates.V4.Presentation.Visuals.Visual.Barrel);
+            if (prefab != null)
+            {
+                var own = Instantiate(prefab, _world, false);
+                own.name = xp ? "PvpXpBarrel" : "PvpHealthBarrel";
+                own.transform.localScale = prefab.transform.localScale * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab);
+                return own;
+            }
+            var root = BuildBarrel(xp);
             root.transform.SetParent(_world, false);
+            return root;
+        }
+
+        /// <summary>A 1v1 barrel as the code builds it: a tinted cylinder body, a dark band, a tall beacon above it (each
+        /// with its own tinted material; the visual prefab builder saves them as assets beside Pvp/pvp_xp_barrel or
+        /// pvp_health_barrel).</summary>
+        public static GameObject BuildBarrel(bool xp)
+        {
+            var root = new GameObject(xp ? "PvpXpBarrel" : "PvpHealthBarrel");
             var body = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(body.GetComponent<Collider>());
+            Kill(body.GetComponent<Collider>());
             body.transform.SetParent(root.transform, false);
             body.transform.localScale = new Vector3(1.6f, 1.1f, 1.6f);
             Tint(body, xp ? XpColor : HealthColor);
             var band = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(band.GetComponent<Collider>());
+            Kill(band.GetComponent<Collider>());
             band.transform.SetParent(root.transform, false);
             band.transform.localScale = new Vector3(1.75f, 0.12f, 1.75f);
             Tint(band, new Color(0.25f, 0.15f, 0.08f));
             // A tall beacon so it is seen from afar.
             var beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(beam.GetComponent<Collider>());
+            Kill(beam.GetComponent<Collider>());
             beam.transform.SetParent(root.transform, false);
             beam.transform.localPosition = new Vector3(0f, 6f, 0f);
             beam.transform.localScale = new Vector3(0.25f, 6f, 0.25f);
@@ -359,12 +404,36 @@ namespace RoguePirates.V4.Presentation.Pvp
             return root;
         }
 
+        /// <summary>The bot's cannonball as the code builds it: a collider-less 0.8 m sphere with a short fading trail (in
+        /// <paramref name="trailMaterial"/>). Its colours are set per shot. The visual prefab builder saves it as
+        /// Pvp/pvp_shot/pvp_shot_Ball.prefab.</summary>
+        public static GameObject BuildBall(Material trailMaterial)
+        {
+            var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Kill(ball.GetComponent<Collider>());
+            ball.transform.localScale = Vector3.one * 0.8f;
+            var trail = ball.AddComponent<TrailRenderer>();
+            trail.time = 0.25f;
+            trail.widthMultiplier = 0.45f;
+            trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.sharedMaterial = trailMaterial;
+            return ball;
+        }
+
+        static void Kill(Object o)
+        {
+            if (o == null) return;
+            if (Application.isPlaying) Destroy(o); else DestroyImmediate(o);
+        }
+
         static void Tint(GameObject go, Color color)
         {
             var r = go.GetComponent<Renderer>();
             if (r == null) return;
             r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            var m = r.material;
+            // In the Editor (the visual prefab builder) a new material the builder saves; in play the renderer's instance.
+            var m = Application.isPlaying ? r.material : (r.sharedMaterial = new Material(r.sharedMaterial));
             if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
             m.color = color;
             if (m.HasProperty("_EmissionColor"))
@@ -379,16 +448,18 @@ namespace RoguePirates.V4.Presentation.Pvp
             var shots = _view.Shots;
             while (_balls.Count < shots.Count)
             {
-                var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Destroy(ball.GetComponent<Collider>());
-                ball.transform.SetParent(_world, false);
-                ball.transform.localScale = Vector3.one * 0.8f;
-                var trail = ball.AddComponent<TrailRenderer>();
-                trail.time = 0.25f;
-                trail.widthMultiplier = 0.45f;
-                trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 0f);
-                trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                trail.material = _ringMaterial;
+                var prefab = Prefab(RoguePirates.V4.Presentation.Visuals.VisualIds.PvpShot, RoguePirates.V4.Presentation.Visuals.Visual.Ball);
+                GameObject ball;
+                if (prefab != null && prefab.GetComponent<TrailRenderer>() != null)
+                {
+                    ball = Instantiate(prefab, _world, false);
+                    ball.transform.localScale = prefab.transform.localScale * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab);
+                }
+                else
+                {
+                    ball = BuildBall(_ringMaterial);
+                    ball.transform.SetParent(_world, false);
+                }
                 ball.SetActive(false);
                 _balls.Add(ball);
                 _ballColors.Add(Color.clear);
@@ -507,15 +578,35 @@ namespace RoguePirates.V4.Presentation.Pvp
 
         RectTransform NewArrow()
         {
+            var prefab = Prefab(RoguePirates.V4.Presentation.Visuals.VisualIds.PvpArrow, RoguePirates.V4.Presentation.Visuals.Visual.Arrow);
+            RectTransform root;
+            if (prefab != null)
+            {
+                root = (RectTransform)Instantiate(prefab, _arrowRoot, false).transform;
+                root.name = "Arrow";
+                root.localScale = Vector3.one * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab);
+            }
+            else
+            {
+                root = BuildArrow(MinimapUiSprites.Triangle);
+                root.SetParent(_arrowRoot, false);
+            }
+            return root;
+        }
+
+        /// <summary>A 1v1 edge arrow as the code builds it: a "Triangle" image (pointing down; turned by the code) with a
+        /// dark outline, and a bold outlined "Label" (FOE, XP, HP). The visual prefab builder saves it as
+        /// Pvp/pvp_arrow/pvp_arrow_Arrow.prefab.</summary>
+        public static RectTransform BuildArrow(Sprite triangleSprite)
+        {
             var root = (RectTransform)new GameObject("Arrow", typeof(RectTransform)).transform;
-            root.SetParent(_arrowRoot, false);
             root.anchorMin = root.anchorMax = new Vector2(0.5f, 0.5f);
             root.sizeDelta = Vector2.zero;
             var tri = (RectTransform)new GameObject("Triangle", typeof(RectTransform), typeof(Image)).transform;
             tri.SetParent(root, false);
             tri.sizeDelta = new Vector2(46f, 46f);
             var img = tri.GetComponent<Image>();
-            img.sprite = MinimapUiSprites.Triangle;
+            img.sprite = triangleSprite;
             img.raycastTarget = false;
             var outline = tri.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0f, 0f, 0f, 0.8f);
@@ -539,19 +630,44 @@ namespace RoguePirates.V4.Presentation.Pvp
             root.SetParent(_world, false);
             var shipRoot = FindShipRoot(model);
             root.SetPositionAndRotation(shipRoot.position, shipRoot.rotation);
-            var copy = Instantiate(model.gameObject, model.position, model.rotation, root);
-            copy.name = "Model";
-            copy.transform.localScale = model.lossyScale;
-            foreach (var b in copy.GetComponentsInChildren<MonoBehaviour>(true)) Destroy(b);
-            foreach (var c in copy.GetComponentsInChildren<Collider>(true)) Destroy(c);
-            foreach (var r in copy.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+            // V5 (visual prefabs): the opponent's ship prefab (Pvp/pvp_opponent: the player's ship model, cleaned), dressed
+            // as the player's ship is right now (its Captain's look, its parts shown or hidden), then tinted by its tuning
+            // (red, 0.7). Without the prefab: a copy of the player's model as before.
+            var prefab = Prefab(RoguePirates.V4.Presentation.Visuals.VisualIds.PvpOpponent, RoguePirates.V4.Presentation.Visuals.Visual.Ship);
+            var live = prefab != null ? RoguePirates.V4.Presentation.Visuals.ShipLook.FindModel(model, prefab) : null;
+            GameObject copy;
+            if (live != null)
+            {
+                copy = new GameObject("Model");
+                copy.transform.SetParent(root, false);
+                copy.transform.SetPositionAndRotation(model.position, model.rotation);
+                copy.transform.localScale = model.lossyScale;
+                var ship = Instantiate(prefab, copy.transform, false);
+                ship.name = live.name;
+                ship.transform.localPosition = live.localPosition;
+                ship.transform.localRotation = live.localRotation;
+                ship.transform.localScale = live.localScale;
+                RoguePirates.V4.Presentation.Visuals.ShipLook.CopyMaterials(live, ship.transform);
+                RoguePirates.V4.Presentation.Visuals.ShipLook.CopyShown(live, ship.transform);
+            }
+            else
+            {
+                copy = Instantiate(model.gameObject, model.position, model.rotation, root);
+                copy.name = "Model";
+                copy.transform.localScale = model.lossyScale;
+                foreach (var b in copy.GetComponentsInChildren<MonoBehaviour>(true)) Destroy(b);
+                foreach (var c in copy.GetComponentsInChildren<Collider>(true)) Destroy(c);
+                foreach (var r in copy.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+            }
+            var tint = RoguePirates.V4.Presentation.Visuals.VisualTuning.Colour(prefab, Red);
+            var strength = RoguePirates.V4.Presentation.Visuals.VisualTuning.Strength(prefab, 0.7f);
             foreach (var r in copy.GetComponentsInChildren<Renderer>(true))
             {
                 if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
                 foreach (var m in r.materials)
                 {
-                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.Lerp(m.GetColor("_BaseColor"), Red, 0.7f));
-                    else if (m.HasProperty("_Color")) m.color = Color.Lerp(m.color, Red, 0.7f);
+                    if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", Color.Lerp(m.GetColor("_BaseColor"), tint, strength));
+                    else if (m.HasProperty("_Color")) m.color = Color.Lerp(m.color, tint, strength);
                 }
             }
             _opponent = root;

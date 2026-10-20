@@ -8,6 +8,7 @@ using RoguePirates.V4.Views;
 using RoguePirates.V4.Weapons;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using Shared = RoguePirates.V4.Presentation.Visuals;
 
 namespace RoguePirates.V4.Presentation.Weapons
 {
@@ -547,14 +548,15 @@ namespace RoguePirates.V4.Presentation.Weapons
         }
 
         /// <summary>V3 OnMineExploded: the powder keg blast (only its impact, ring and smoke children), else a burst.</summary>
-        public void Explosion(Vector3 position, float radius) => ExplosionFor(Visuals != null ? KegAt(position) : null, position, radius);
+        public void Explosion(Vector3 position, float radius) => ExplosionFor(Visuals != null ? KegAt(position) : null, position, radius, Shared.VisualIds.ItemBlast);
 
-        /// <summary>The keg blast of <paramref name="weaponId"/> (its blast prefab; Hackathon), else the shared one.</summary>
-        void ExplosionFor(string weaponId, Vector3 position, float radius)
+        /// <summary>The keg blast of <paramref name="weaponId"/> (its blast prefab; Hackathon), else the shared one (V5: the
+        /// visual catalog's <paramref name="sharedId"/> blast: the items' or the enemies').</summary>
+        void ExplosionFor(string weaponId, Vector3 position, float radius, string sharedId)
         {
             if (_settings == null) return;
             var prefab = _settings.powderKegExplosionPrefab != null ? _settings.powderKegExplosionPrefab : _settings.weaponExplosionPrefab;
-            prefab = Pick(weaponId, WeaponVisualSlot.Blast, prefab);
+            prefab = Pick(weaponId, WeaponVisualSlot.Blast, SharedPick(sharedId, Shared.Visual.Blast, prefab));
             if (prefab == null) return;
 
             var scaleMult = 1f;
@@ -562,7 +564,7 @@ namespace RoguePirates.V4.Presentation.Weapons
                 scaleMult = binding.impactScaleMult;
             var scale = Mathf.Max(1.15f, _settings.powderKegExplosionScale * 2.35f * scaleMult * Mathf.Clamp(radius / 2.8f, 0.9f, 1.35f));
             var burstPos = position + Vector3.up * 0.45f;
-            if (PlayFilteredExplosion(prefab, burstPos, scale, 1.5f * WeaponVisualTuning.Lifetime(prefab))) return;
+            if (PlayFilteredExplosion(prefab, burstPos + Vector3.up * Shared.VisualTuning.Height(prefab), scale, 1.5f * WeaponVisualTuning.Lifetime(prefab) * Shared.VisualTuning.Lifetime(prefab))) return;
             PlayBurst(prefab, burstPos, Quaternion.identity, scale * 0.65f, 1.35f);
         }
 
@@ -572,15 +574,17 @@ namespace RoguePirates.V4.Presentation.Weapons
             if (StrikeIsDoubloons()) { CoinBurst(_aimedWeapon, position, radius); return; }
             // Hackathon: the strike prefab of the strike weapon that aimed this frame (else the equipped one).
             var weapon = Visuals != null ? AimedOrEquipped(ConfigEnums.WeaponBehavior.AreaStrike, c => c.visual.placeholderLook != WeaponPlaceholderLook.Doubloons) : null;
-            var prefab = Pick(weapon, WeaponVisualSlot.Strike, _settings != null ? _settings.lightningStrikePrefab : null);
+            // V5: with no strike weapon (Storm in a Bottle on its own) the items' strike prefab (Effects/item_strike).
+            var prefab = Pick(weapon, WeaponVisualSlot.Strike, SharedPick(Shared.VisualIds.ItemStrike, Shared.Visual.Strike, _settings != null ? _settings.lightningStrikePrefab : null));
             if (_settings == null || prefab == null) return;
             var strikePos = position;
             strikePos.y = 0.05f;
             var scale = _settings.lightningStrikeScale * Mathf.Clamp(radius / 3.5f, 0.85f, 1.35f);
+            strikePos.y += Shared.VisualTuning.Height(prefab);
             var go = Spawn(KindLightning, prefab, strikePos, Quaternion.identity, scale, out var pooled);
             if (go == null) return;
             Restart(Prepare(go).Particles);
-            AddTimed(go, pooled, 1.15f * WeaponVisualTuning.Lifetime(prefab));
+            AddTimed(go, pooled, 1.15f * WeaponVisualTuning.Lifetime(prefab) * Shared.VisualTuning.Lifetime(prefab));
         }
 
         /// <summary>
@@ -597,6 +601,9 @@ namespace RoguePirates.V4.Presentation.Weapons
             position.y = 0.15f;
             var scale = MortarTelegraphScaleForRadius(radius, _settings.mortarTelegraphScale);
             var lifetime = MortarWindupSeconds + 0.12f;
+            // V5 (visual prefabs): the reticle's own prefab (Effects/mortar_reticle: the WaterReticle as its root).
+            var own = SharedPick(Shared.VisualIds.MortarReticle, Shared.Visual.Reticle, null);
+            if (own != null && PlayMortarReticle(own, position + Vector3.up * Shared.VisualTuning.Height(own), scale, lifetime * Shared.VisualTuning.Lifetime(own), true)) return;
             var template = _settings.mortarTelegraphPrefab != null ? _settings.mortarTelegraphPrefab : _settings.lightningStrikePrefab;
             if (template != null && PlayMortarReticle(template, position, scale, lifetime)) return;
 
@@ -626,7 +633,8 @@ namespace RoguePirates.V4.Presentation.Weapons
                 MarkShell(position, weapon);
                 if (opening) ShowWhirlpool(weapon, position, radius, seconds);
             }
-            if (HazardRings != null) HazardRings.ShowTimedRing(position, radius, seconds, Pick(weapon, WeaponVisualSlot.LandingRing, null));
+            // V5: a ring with no weapon (the Leviathan Heart's) is the items' ring prefab (Effects/item_ring).
+            if (HazardRings != null) HazardRings.ShowTimedRing(position, radius, seconds, weapon != null ? Pick(weapon, WeaponVisualSlot.LandingRing, null) : SharedPick(Shared.VisualIds.ItemRing, Shared.Visual.LandingRing, null));
         }
 
         /// <summary>
@@ -637,6 +645,8 @@ namespace RoguePirates.V4.Presentation.Weapons
         {
             if (_settings == null) return;
             var burstPrefab = _settings.mortarExplosionPrefab != null ? _settings.mortarExplosionPrefab : _settings.weaponExplosionPrefab;
+            // V5: with no shell weapon (the Hammerhead Helm's bow spark) the items' impact prefab (Effects/item_impact).
+            burstPrefab = SharedPick(Shared.VisualIds.ItemImpact, Shared.Visual.Impact, burstPrefab);
             // Hackathon: the impact prefab of the shell that landed here (else the equipped shell weapon's).
             NoteLanding(position);
             if (Visuals != null)
@@ -690,7 +700,7 @@ namespace RoguePirates.V4.Presentation.Weapons
         public int PulseCount => _pulses.Count;
 
         /// <summary>An aura pulse without its weapon: a gold ring.</summary>
-        public void AuraPulse(Vector3 center, float radius) => AddPulse(center, radius, AuraPulseColor, 0.5f, 0.3f, 0.45f, null);
+        public void AuraPulse(Vector3 center, float radius) => AddPulse(center, radius, AuraPulseColor, 0.5f, 0.3f, 0.45f, SharedPick(Shared.VisualIds.AuraPulse, Shared.Visual.PulseRing, null));
 
         public void WeaponPulse(string weaponId, Vector3 center, float radius)
         {
@@ -716,11 +726,11 @@ namespace RoguePirates.V4.Presentation.Weapons
             line.useWorldSpace = true;
             line.loop = true;
             line.positionCount = PulseSegments;
-            seconds *= WeaponVisualTuning.Lifetime(prefab);
+            seconds *= WeaponVisualTuning.Lifetime(prefab) * Shared.VisualTuning.Lifetime(prefab);
             _pulses.Add(new Pulse
             {
-                Center = center + Vector3.up * WeaponVisualTuning.Height(prefab), Radius = radius, Left = seconds, Total = seconds,
-                Width = width * WeaponVisualTuning.Width(prefab), StartFraction = startFraction, Color = WeaponVisualTuning.Colour(prefab, color),
+                Center = center + Vector3.up * (WeaponVisualTuning.Height(prefab) + Shared.VisualTuning.Height(prefab)), Radius = radius * Shared.VisualTuning.Scale(prefab), Left = seconds, Total = seconds,
+                Width = width * WeaponVisualTuning.Width(prefab) * Shared.VisualTuning.Width(prefab), StartFraction = startFraction, Color = Shared.VisualTuning.Colour(prefab, WeaponVisualTuning.Colour(prefab, color)),
                 View = new View { Go = go, Pooled = pooled }, Line = line,
             });
         }
@@ -780,9 +790,11 @@ namespace RoguePirates.V4.Presentation.Weapons
         /// <summary>V3 OnBurningOilDropped: the burning trail prefab sized by the patch radius, for 1.6 s.</summary>
         public void BurningPatch(Vector3 position, float radius)
         {
-            if (_settings == null || _settings.burningTrailPrefab == null) return;
+            // V5 (visual prefabs): the burning trail's own prefab (Effects/burning_patch), else the juice settings'.
+            var prefab = SharedPick(Shared.VisualIds.BurningPatch, Shared.Visual.Patch, _settings != null ? _settings.burningTrailPrefab : null);
+            if (_settings == null || prefab == null) return;
             var scale = _settings.burningTrailScale * Mathf.Clamp(radius / 2.8f, 0.75f, 1.6f);
-            PlayBurst(_settings.burningTrailPrefab, position, Quaternion.identity, scale, 1.6f);
+            PlayBurst(prefab, position, Quaternion.identity, scale, 1.6f);
         }
 
         /// <summary>V3 JuiceVfxBroker.PlayWaterSplash: the splash prefab at y 0.35 for 0.55 s, merged with a recent nearby one.</summary>
@@ -791,7 +803,8 @@ namespace RoguePirates.V4.Presentation.Weapons
         /// <summary>The splash of <paramref name="weaponId"/> (its splash prefab; Hackathon), else the shared one.</summary>
         void WaterSplashFor(string weaponId, Vector3 position)
         {
-            var prefab = Pick(weaponId, WeaponVisualSlot.WaterSplash, _settings != null ? _settings.waterImpactSplashPrefab : null);
+            // V5: a splash with no weapon (enemy shots) is the shared splash prefab (Effects/splash).
+            var prefab = Pick(weaponId, WeaponVisualSlot.WaterSplash, SharedPick(Shared.VisualIds.Splash, Shared.Visual.Splash, _settings != null ? _settings.waterImpactSplashPrefab : null));
             if (_settings == null || prefab == null) return;
             if (Time.time - _lastSplashTime < SplashMergeSeconds
                 && (position - _lastSplashPos).sqrMagnitude < SplashMergeRadius * SplashMergeRadius)
@@ -807,7 +820,7 @@ namespace RoguePirates.V4.Presentation.Weapons
         public void PlayExplosion(Vector3 position, float blastRadius)
         {
             position.y = 0f;
-            ExplosionFor(null, position, blastRadius); // the enemies' blasts keep the shared keg blast
+            ExplosionFor(null, position, blastRadius, Shared.VisualIds.EnemyBlast); // the enemies' blast (Effects/enemy_blast; V5)
         }
 
         readonly Dictionary<string, string> _summonKinds = new Dictionary<string, string>();
@@ -1191,8 +1204,8 @@ namespace RoguePirates.V4.Presentation.Weapons
         /// <summary>V3 JuiceVfxBroker.Play (VfxPool.Play): the prefab, every particle system cleared and replayed.</summary>
         void PlayBurst(GameObject prefab, Vector3 position, Quaternion rotation, float scale, float lifetime)
         {
-            position.y += WeaponVisualTuning.Height(prefab);
-            lifetime *= WeaponVisualTuning.Lifetime(prefab);
+            position.y += WeaponVisualTuning.Height(prefab) + Shared.VisualTuning.Height(prefab);
+            lifetime *= WeaponVisualTuning.Lifetime(prefab) * Shared.VisualTuning.Lifetime(prefab);
             var go = Spawn(KindBurst, prefab, position, rotation, scale, out var pooled);
             if (go == null) return;
             var particles = Prepare(go).Particles;
@@ -1223,9 +1236,9 @@ namespace RoguePirates.V4.Presentation.Weapons
         }
 
         /// <summary>V3 TryPlayMortarReticle: the telegraph prefab's WaterReticle child, tinted with the mortar colour.</summary>
-        bool PlayMortarReticle(GameObject template, Vector3 position, float scale, float lifetime)
+        bool PlayMortarReticle(GameObject template, Vector3 position, float scale, float lifetime, bool isReticle = false)
         {
-            var reticle = template.transform.Find(ReticleChild);
+            var reticle = isReticle ? template.transform : template.transform.Find(ReticleChild);
             if (reticle == null) return false;
             var go = Spawn(KindReticle, reticle.gameObject, position, Quaternion.identity, scale, out var pooled);
             if (go == null) return false;
@@ -1260,19 +1273,55 @@ namespace RoguePirates.V4.Presentation.Weapons
             RegisterMuzzle(s.shootingVfxPrefab, PrewarmMuzzle * shared);
 
             var kegBlast = s.powderKegExplosionPrefab != null ? s.powderKegExplosionPrefab : s.weaponExplosionPrefab;
-            if (kegBlast != null) EnsurePool(HasNamedExplosionChild(kegBlast.transform) ? KindBlast : KindBurst, kegBlast, PrewarmBlast);
+            if (kegBlast != null) EnsurePool(HasNamedExplosionChild(kegBlast.transform) ? KindBlast : KindBurst, kegBlast, SharedNeed(Shared.VisualIds.EnemyBlast, Shared.Visual.Blast, PrewarmBlast));
             var mortarBurst = s.mortarExplosionPrefab != null ? s.mortarExplosionPrefab : s.weaponExplosionPrefab;
             if (mortarBurst != null) EnsurePool(KindBurst, mortarBurst, PrewarmMortarBurst * shared);
             if (s.lightningStrikePrefab != null) EnsurePool(KindLightning, s.lightningStrikePrefab, PrewarmLightning * shared);
             if (s.laserBeamPrefab != null) EnsurePool(KindBeam, s.laserBeamPrefab, PrewarmBeam * shared);
             var telegraph = s.mortarTelegraphPrefab != null ? s.mortarTelegraphPrefab : s.lightningStrikePrefab;
             var reticle = telegraph != null ? telegraph.transform.Find(ReticleChild) : null;
-            if (reticle != null) EnsurePool(KindReticle, reticle.gameObject, PrewarmReticle);
-            if (s.burningTrailPrefab != null) EnsurePool(KindBurst, s.burningTrailPrefab, PrewarmBurst);
-            if (s.waterImpactSplashPrefab != null) EnsurePool(KindBurst, s.waterImpactSplashPrefab, PrewarmSplash);
+            if (reticle != null) EnsurePool(KindReticle, reticle.gameObject, SharedNeed(Shared.VisualIds.MortarReticle, Shared.Visual.Reticle, PrewarmReticle));
+            if (s.burningTrailPrefab != null) EnsurePool(KindBurst, s.burningTrailPrefab, SharedNeed(Shared.VisualIds.BurningPatch, Shared.Visual.Patch, PrewarmBurst));
+            if (s.waterImpactSplashPrefab != null) EnsurePool(KindBurst, s.waterImpactSplashPrefab, SharedNeed(Shared.VisualIds.Splash, Shared.Visual.Splash, PrewarmSplash));
+            PrewarmShared();
             if (s.mineBarrelPrefab != null) EnsurePool(KindKeg, s.mineBarrelPrefab, PrewarmKeg * shared);
             if (s.cutlassPrefab != null) EnsurePool(KindCutlass, s.cutlassPrefab, PrewarmCutlass * shared);
             if (_skiffModel != null) EnsurePool(KindSkiff, _skiffModel, PrewarmSkiff);
+        }
+
+        /// <summary>
+        /// V5 (visual prefabs): the shared non-weapon effects' own prefabs from the visual catalog (Effects/: the enemies'
+        /// and the items' blasts, the shared splash, the burning patch, the mortar reticle, the items' strike and impact,
+        /// the plain aura pulse), pooled and prewarmed as the juice settings' prefabs were. The juice settings' pools above
+        /// stay for a catalog row that is emptied.
+        /// </summary>
+        /// <summary>The prewarm a juice settings pool still needs: none when the weapons have their own prefabs and the visual
+        /// catalog has this shared one (it is not drawn from then; the pool stays registered for an emptied row).</summary>
+        int SharedNeed(string id, string visual, int prewarm) =>
+            Visuals != null && Shared.VisualPick.Get(id, visual) != null ? 0 : prewarm;
+
+        void PrewarmShared()
+        {
+            var catalog = Shared.VisualPick.Catalog;
+            if (catalog == null) return;
+            void Blast(string id, int prewarm)
+            {
+                var p = catalog.Get(id, Shared.Visual.Blast);
+                if (p != null) EnsurePool(HasNamedExplosionChild(p.transform) ? KindBlast : KindBurst, p, prewarm);
+            }
+            Blast(Shared.VisualIds.EnemyBlast, PrewarmBlast);
+            Blast(Shared.VisualIds.ItemBlast, 8);
+            void Pool(string id, string visual, string kind, int prewarm)
+            {
+                var p = catalog.Get(id, visual);
+                if (p != null) EnsurePool(kind, p, prewarm);
+            }
+            Pool(Shared.VisualIds.Splash, Shared.Visual.Splash, KindBurst, PrewarmSplash);
+            Pool(Shared.VisualIds.BurningPatch, Shared.Visual.Patch, KindBurst, PrewarmBurst);
+            Pool(Shared.VisualIds.MortarReticle, Shared.Visual.Reticle, KindReticle, PrewarmReticle);
+            Pool(Shared.VisualIds.ItemStrike, Shared.Visual.Strike, KindLightning, 5);
+            Pool(Shared.VisualIds.ItemImpact, Shared.Visual.Impact, KindBurst, 4);
+            Pool(Shared.VisualIds.AuraPulse, Shared.Visual.PulseRing, KindPulse, 2);
         }
 
         /// <summary>V5 M4: pools and prewarms the weapons' own models (orbit models: one per blade and two spare), so the
@@ -1344,10 +1393,13 @@ namespace RoguePirates.V4.Presentation.Weapons
                 go = Instantiate(prefab, position, rotation, LooseRoot);
                 go.SetActive(true);
             }
-            // Hackathon (13 Oct): the prefab's tuning scales what the code sets (1 without one).
-            if (scale.HasValue) go.transform.localScale = Vector3.one * (scale.Value * WeaponVisualTuning.Scale(prefab));
+            // Hackathon (13 Oct): the prefab's tuning scales what the code sets (1 without one). V5: a shared (non-weapon)
+            // prefab from the visual catalog carries a VisualTuning instead.
+            if (scale.HasValue) go.transform.localScale = Vector3.one * (scale.Value * WeaponVisualTuning.Scale(prefab) * Shared.VisualTuning.Scale(prefab));
             return go;
         }
+
+        static GameObject SharedPick(string id, string visual, GameObject fallback) => Shared.VisualPick.Pick(id, visual, fallback);
 
         Prepared Prepare(GameObject go)
         {

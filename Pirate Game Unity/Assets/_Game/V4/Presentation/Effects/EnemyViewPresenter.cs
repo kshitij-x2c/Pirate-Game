@@ -6,6 +6,7 @@ using RoguePirates.V4.Foundation.VFX;
 using RoguePirates.V4.Config;
 using RoguePirates.V4.Enemies;
 using RoguePirates.V4.Presentation.Pooling;
+using RoguePirates.V4.Presentation.Visuals;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -25,6 +26,8 @@ namespace RoguePirates.V4.Presentation.Effects
     public sealed class EnemyViewPresenter : IEnemyViewSink
     {
         public const string HealthBarKey = PoolCatalog.EnemyKeyPrefix + "health_bar";
+        /// <summary>V5 (visual prefabs): the 1v1 opponent's bar, from its own prefab when the visual catalog has one.</summary>
+        public const string OpponentBarKey = "pvp/opponent_health_bar";
         const int PrewarmBars = 80; // M14.15: ~70 enemies peaked at 73 bars
         const int PrewarmCubes = 8;
 
@@ -37,6 +40,8 @@ namespace RoguePirates.V4.Presentation.Effects
             new Dictionary<int, (TrailRenderer[], ParticleSystem[])>();
         readonly EnemyViewTint _tint = new EnemyViewTint();
         GameObject _cube;
+        bool _ownsCube;
+        GameObject _barPrefab, _opponentBarPrefab;
 
         public int LiveCount => _liveKey.Count;
         /// <summary>V5 M3d: the views' tints (tests).</summary>
@@ -54,17 +59,39 @@ namespace RoguePirates.V4.Presentation.Effects
             if (_pools == null) return;
             // V5 M3e: models are stripped while still inactive (their NavMeshAgents woke and logged on first acquire).
             _pools.RegisterPreparer(PoolCatalog.EnemyKeyPrefix, go => { if (_prepared.Add(go.GetInstanceID())) StripImmediate(go); });
-            if (_juice != null && _juice.enemyHealthBarPrefab != null && !_pools.Has(HealthBarKey))
+            // V5 (visual prefabs): the health bar, the placeholder cube and the 1v1 opponent's bar come from the visual
+            // catalog's prefabs when it has them (else the juice settings' bar and the code-built cube, as before).
+            _barPrefab = VisualPick.Pick(VisualIds.Enemy, Visual.HealthBar, _juice != null ? _juice.enemyHealthBarPrefab : null);
+            if (_barPrefab != null && !_pools.Has(HealthBarKey))
             {
-                _pools.Register(new PoolDefinition(HealthBarKey, _juice.enemyHealthBarPrefab, PrewarmBars, 0, ConfigEnums.PoolOverflowPolicy.Grow, "enemy health bars"));
+                _pools.Register(new PoolDefinition(HealthBarKey, _barPrefab, PrewarmBars, 0, ConfigEnums.PoolOverflowPolicy.Grow, "enemy health bars"));
                 _pools.Prewarm(HealthBarKey);
             }
-            _cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            _cube.name = "EnemyPlaceholder";
-            _cube.SetActive(false);
-            _cube.transform.SetParent(_pools.Staging, false);
-            Object.DestroyImmediate(_cube.GetComponent<Collider>());
+            _opponentBarPrefab = VisualPick.Get(VisualIds.PvpOpponent, Visual.HealthBar);
+            if (_opponentBarPrefab != null && !_pools.Has(OpponentBarKey))
+            {
+                _pools.Register(new PoolDefinition(OpponentBarKey, _opponentBarPrefab, 1, 0, ConfigEnums.PoolOverflowPolicy.Grow, "1v1 opponent health bar"));
+                _pools.Prewarm(OpponentBarKey);
+            }
+            _cube = VisualPick.Get(VisualIds.Enemy, Visual.Placeholder);
+            _ownsCube = _cube == null;
+            if (_ownsCube)
+            {
+                _cube = BuildPlaceholderCube();
+                _cube.transform.SetParent(_pools.Staging, false);
+            }
             Register(_cube, PrewarmCubes, "placeholder cubes");
+        }
+
+        /// <summary>V3's placeholder: a collider-less cube (tinted per enemy when drawn). The visual prefab builder saves it
+        /// as Enemies/enemy/enemy_Placeholder.prefab.</summary>
+        public static GameObject BuildPlaceholderCube()
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.name = "EnemyPlaceholder";
+            cube.SetActive(false);
+            Object.DestroyImmediate(cube.GetComponent<Collider>());
+            return cube;
         }
 
         // Playtest (3 Oct, owner): one colour per enemy ship type and variant, readable at a glance from the camera (sails
@@ -108,14 +135,17 @@ namespace RoguePirates.V4.Presentation.Effects
             // Hackathon art pass (12 Oct): the art team's model for this enemy or variant id (juice settings), built to the
             // config model's footprint, facing and water line; it keeps its own colours (each ship type has its own art).
             var art = _juice != null ? _juice.EnemyArtModel(def.id) : null;
-            var prefab = art != null ? art : def.visualPrefab != null ? def.visualPrefab : EnemyVisualFallbackResolver.ResolvePrefab(def);
+            // V5 (visual prefabs): the enemy's own model prefab from the visual catalog (a copy of its config model, or the
+            // art team's model itself), else as before. Its VisualTuning scales the drawn size and can set the tint.
+            var own = VisualPick.Get(def.id, Visual.Model);
+            var prefab = own != null ? own : art != null ? art : def.visualPrefab != null ? def.visualPrefab : EnemyVisualFallbackResolver.ResolvePrefab(def);
             if (prefab != null)
             {
                 var view = Acquire(prefab, position, Quaternion.Euler(0f, def.visualYawOffset, 0f));
                 if (view == null) return null;
-                view.localScale = Vector3.one * (scale * (def.viewSize > 0f ? def.viewSize : 1f));
+                view.localScale = Vector3.one * (scale * (def.viewSize > 0f ? def.viewSize : 1f) * VisualTuning.Scale(own));
                 _tint.Record(view); // its own materials, recorded on its first use (before any burn flash)
-                if (art != null)
+                if (art != null || VisualTuning.KeepsOwnColours(own))
                 {
                     EnemyViewAnimation.ApplySpawnVariation(view, animationSeed);
                     Profiles?.EnemyViewCreated(def.id, view);
@@ -125,8 +155,8 @@ namespace RoguePirates.V4.Presentation.Effects
                 // were visually the same"): each ship type has its own colour on its sails and flags, and its hull leans
                 // towards it; a creature keeps its data tint. Playtest (3 Oct, owner, round 7): no masthead pennant ("a coloured
                 // bar above almost every enemy").
-                var accent = TypeColor(def);
-                var hullTint = accent == def.visualTint ? def.visualTint : Color.Lerp(Color.white, accent, HullTintStrength);
+                var accent = VisualTuning.Colour(own, TypeColor(def));
+                var hullTint = accent == def.visualTint ? def.visualTint : Color.Lerp(Color.white, accent, VisualTuning.Strength(own, HullTintStrength));
                 _tint.Apply(view, hullTint, accent);
                 EnemyViewAnimation.ApplySpawnVariation(view, animationSeed);
                 Profiles?.EnemyViewCreated(def.id, view);
@@ -137,7 +167,7 @@ namespace RoguePirates.V4.Presentation.Effects
             var cube = Acquire(_cube, position, Quaternion.identity);
             if (cube == null) return null;
             cube.name = string.IsNullOrEmpty(def.displayName) ? def.id : def.displayName;
-            cube.localScale = Vector3.one * (def.radius * 2f * scale);
+            cube.localScale = Vector3.one * (def.radius * 2f * scale * VisualTuning.Scale(_cube));
             var renderer = cube.GetComponent<Renderer>();
             if (renderer != null) renderer.material.color = elite ? Color.magenta : def.placeholderColor;
             Profiles?.EnemyViewCreated(def.id, cube);
@@ -164,7 +194,7 @@ namespace RoguePirates.V4.Presentation.Effects
         /// enemy (the Reef Crab at 1.6x, its elite at 2.4x, the boss) hides inside its own model.</summary>
         float BarHeight(Transform view)
         {
-            var height = _juice != null ? _juice.enemyHealthBarHeight : 3f;
+            var height = (_juice != null ? _juice.enemyHealthBarHeight : 3f) + VisualTuning.Height(_barPrefab);
             var found = false;
             var top = float.MinValue;
             view.GetComponentsInChildren(false, _renderers);
@@ -175,7 +205,7 @@ namespace RoguePirates.V4.Presentation.Effects
                 found = true;
             }
             _renderers.Clear();
-            return found ? Mathf.Max(height, top - view.position.y + BarClearance) : height;
+            return found ? Mathf.Max(height, top - view.position.y + BarClearance + VisualTuning.Height(_barPrefab)) : height;
         }
 
         const float BarClearance = 0.8f;
@@ -185,12 +215,13 @@ namespace RoguePirates.V4.Presentation.Effects
         /// over the 1v1 opponent's ship (the caller sets its fill and releases it).</summary>
         public WorldHealthBar AttachOpponentHealthBar(Transform view)
         {
-            if (view == null || _pools == null || !_pools.Has(HealthBarKey)) return null;
-            var go = _pools.Acquire(HealthBarKey, view.position, Quaternion.identity);
+            var key = _pools != null && _pools.Has(OpponentBarKey) ? OpponentBarKey : HealthBarKey; // V5: the opponent's own bar prefab
+            if (view == null || _pools == null || !_pools.Has(key)) return null;
+            var go = _pools.Acquire(key, view.position, Quaternion.identity);
             if (go == null) return null;
             var bar = go.GetComponent<WorldHealthBar>();
             if (bar == null) bar = go.AddComponent<WorldHealthBar>();
-            bar.Bind(view, _juice != null ? _juice.enemyHealthBarHeight : 3f);
+            bar.Bind(view, (_juice != null ? _juice.enemyHealthBarHeight : 3f) + VisualTuning.Height(key == OpponentBarKey ? _opponentBarPrefab : _barPrefab));
             bar.SetFill(1f);
             return bar;
         }
@@ -336,7 +367,7 @@ namespace RoguePirates.V4.Presentation.Effects
             _tint.Clear();
             _wakes.Clear();
             _trailWidths.Clear();
-            if (_cube != null) Object.Destroy(_cube);
+            if (_cube != null && _ownsCube) Object.Destroy(_cube);
             _cube = null;
         }
 

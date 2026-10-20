@@ -85,6 +85,9 @@ namespace RoguePirates.V4.Presentation.Pooling
             var art = Resources.Load<RoguePirates.V4.Foundation.Data.DemoJuiceSettings>("DemoJuiceSettings");
             GameObject Model(string id, GameObject configModel)
             {
+                // V5 (visual prefabs): the enemy's own model prefab from the visual catalog comes first (as the view draws it).
+                var own = Visuals.VisualPick.Get(id, Visuals.Visual.Model);
+                if (own != null) return own;
                 var m = art != null ? art.EnemyArtModel(id) : null;
                 return m != null ? m : configModel;
             }

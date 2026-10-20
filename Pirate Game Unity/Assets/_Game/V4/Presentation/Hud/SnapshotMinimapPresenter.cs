@@ -140,7 +140,7 @@ namespace RoguePirates.V4.Presentation.Hud
             }
             _player = Child(_iconRoot, "Player");
             _player.sizeDelta = new Vector2(14f, 14f);
-            MinimapMarkerGraphics.Apply(_player, MinimapMarkerGraphics.GlyphKind.Player);
+            ApplyGlyph(_player, MinimapMarkerGraphics.GlyphKind.Player);
             DisableRaycasts(_player);
         }
 
@@ -283,7 +283,7 @@ namespace RoguePirates.V4.Presentation.Hud
                 var poi = stage.Poi(i);
                 var icon = Child(_iconRoot, "POI_" + poi.type);
                 icon.sizeDelta = new Vector2(12f, 12f);
-                MinimapMarkerGraphics.Apply(icon, MinimapMarkerGraphics.FromPoi(poi.type));
+                ApplyGlyph(icon, MinimapMarkerGraphics.FromPoi(poi.type));
                 DisableRaycasts(icon);
                 icon.SetSiblingIndex(0); // under the boss and the ship
                 _poiIcons.Add(icon);
@@ -320,10 +320,10 @@ namespace RoguePirates.V4.Presentation.Hud
                 {
                     for (var c = icon.childCount - 1; c >= 0; c--) Destroy(icon.GetChild(c).gameObject);
                     icon.sizeDelta = t.isBoss ? new Vector2(20f, 20f) : new Vector2(15f, 15f);
-                    MinimapMarkerGraphics.Apply(icon, (MinimapMarkerGraphics.GlyphKind)kind);
+                    var fromPrefab = ApplyGlyph(icon, (MinimapMarkerGraphics.GlyphKind)kind);
                     // Hackathon (12 Oct, owner): bosses must stand out: a larger glyph over a pulsing gold halo.
                     icon.localScale = Vector3.one * (t.isBoss ? BossIconScale : 1f);
-                    if (t.isBoss) AddBossHalo(icon);
+                    if (t.isBoss && !fromPrefab) AddBossHalo(icon); // the boss icon prefab has its halo
                     DisableRaycasts(icon);
                     _threatKinds[i] = kind;
                 }
@@ -347,6 +347,35 @@ namespace RoguePirates.V4.Presentation.Hud
         }
 
         const float BossIconScale = 2.2f;
+
+        /// <summary>
+        /// V5 (visual prefabs): a minimap glyph from its icon prefab (World/minimap_&lt;glyph&gt;/minimap_&lt;glyph&gt;_Icon: the
+        /// glyph's images under a centred root, the boss's with its halo), else drawn by MinimapMarkerGraphics as before.
+        /// True when it came from the prefab.
+        /// </summary>
+        static bool ApplyGlyph(RectTransform icon, MinimapMarkerGraphics.GlyphKind kind)
+        {
+            var prefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.MinimapIcon(kind.ToString()), RoguePirates.V4.Presentation.Visuals.Visual.Icon);
+            if (prefab == null) { MinimapMarkerGraphics.Apply(icon, kind); return false; }
+            for (var c = icon.childCount - 1; c >= 0; c--) Destroy(icon.GetChild(c).gameObject);
+            var glyph = (RectTransform)Instantiate(prefab, icon, false).transform;
+            glyph.name = "Glyph";
+            glyph.localScale = prefab.transform.localScale * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab);
+            return true;
+        }
+
+        /// <summary>A minimap glyph as the code draws it, on a centred root (the visual prefab builder saves one per glyph;
+        /// the boss's gets its halo, as the boss icon does).</summary>
+        public static RectTransform BuildGlyph(MinimapMarkerGraphics.GlyphKind kind)
+        {
+            var root = (RectTransform)new GameObject(kind.ToString(), typeof(RectTransform)).transform;
+            root.anchorMin = root.anchorMax = new Vector2(0.5f, 0.5f);
+            root.sizeDelta = Vector2.zero;
+            MinimapMarkerGraphics.Apply(root, kind);
+            if (kind == MinimapMarkerGraphics.GlyphKind.Boss) AddBossHalo(root);
+            DisableRaycasts(root);
+            return root;
+        }
 
         static void AddBossHalo(RectTransform icon)
         {

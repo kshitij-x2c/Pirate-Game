@@ -52,22 +52,77 @@ namespace RoguePirates.V4.Presentation.Stage
             _touch = touch;
         }
 
+        const string PanelName = "PLACEHOLDER_v3_ui_interaction_prompt";
+        const string SkipName = "PLACEHOLDER_v3_ui_TouchSkip";
+
         void Build(Transform canvas)
         {
-            var panel = new GameObject("PLACEHOLDER_v3_ui_interaction_prompt");
-            panel.transform.SetParent(transform, false);
-            _panel = panel.AddComponent<RectTransform>();
+            // V5 (visual prefabs): the panel from World/interaction_prompt/interaction_prompt_Prompt (its look: colours,
+            // fonts, sprites; the code still places it per layout and wires the buttons), else code-built as before.
+            var prefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.InteractionPrompt, RoguePirates.V4.Presentation.Visuals.Visual.Prompt);
+            GameObject panel;
+            if (prefab != null && prefab.transform.Find("Prompt") != null && prefab.transform.Find("TouchInteract") != null)
+            {
+                panel = Instantiate(prefab, transform, false);
+                panel.name = PanelName;
+            }
+            else panel = BuildPanel(transform);
+            _panel = (RectTransform)panel.transform;
+            _group = panel.GetComponent<CanvasGroup>();
+            if (_group == null) _group = panel.AddComponent<CanvasGroup>();
+            _textRect = (RectTransform)panel.transform.Find("Prompt");
+            _text = _textRect.GetComponent<TextMeshProUGUI>();
+            var buttonGo = panel.transform.Find("TouchInteract").gameObject;
+            _button = buttonGo.GetComponent<Button>();
+            var trigger = buttonGo.GetComponent<EventTrigger>();
+            if (trigger == null) trigger = buttonGo.AddComponent<EventTrigger>();
+            AddPointerEvent(trigger, EventTriggerType.PointerDown, _ => SetTouchHolding(true));
+            AddPointerEvent(trigger, EventTriggerType.PointerUp, _ => SetTouchHolding(false));
+            AddPointerEvent(trigger, EventTriggerType.PointerExit, _ => SetTouchHolding(false));
+            _button.onClick.AddListener(() => _touch?.TouchPressed());
+            // V5 M7: Skip on the chest choice for touch (R on a keyboard).
+            var skip = panel.transform.Find(SkipName);
+            _skip = skip != null ? skip.GetComponent<Button>() : null;
+            if (_skip != null)
+            {
+                _skip.onClick.AddListener(() => _touch?.TouchSkip());
+                _skip.gameObject.SetActive(false);
+            }
             ApplyBottomAnchor();
-            _panel.sizeDelta = new Vector2(520f, 72f);
+            SetVisible(false);
+            _built = true;
+        }
+
+        /// <summary>
+        /// The prompt panel as the code builds it (no listeners): the dark panel at the bottom with its CanvasGroup, the
+        /// "Prompt" text, the "TouchInteract" USE button (with an empty EventTrigger) and the hidden SKIP button. The visual
+        /// prefab builder saves it as World/interaction_prompt/interaction_prompt_Prompt.prefab.
+        /// </summary>
+        public static GameObject BuildPanel(Transform parent)
+        {
+            var panel = new GameObject(PanelName);
+            if (parent != null) panel.transform.SetParent(parent, false);
+            var rect = panel.AddComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0f);
+            rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = new Vector2(0f, 150f);
+            rect.sizeDelta = new Vector2(520f, 72f);
             panel.AddComponent<Image>().color = new Color(0.06f, 0.1f, 0.16f, 0.92f);
-            _group = panel.AddComponent<CanvasGroup>();
+            panel.AddComponent<CanvasGroup>();
 
             var textGo = new GameObject("Prompt");
             textGo.transform.SetParent(panel.transform, false);
-            _textRect = textGo.AddComponent<RectTransform>();
-            _text = textGo.AddComponent<TextMeshProUGUI>();
-            _text.color = PlaceholderFactory.UiText;
-            ApplyCompactTextLayout();
+            var textRect = textGo.AddComponent<RectTransform>();
+            var text = textGo.AddComponent<TextMeshProUGUI>();
+            text.color = PlaceholderFactory.UiText;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(16f, 8f);
+            textRect.offsetMax = new Vector2(-120f, -8f);
+            text.fontSize = 22;
+            text.alignment = TextAlignmentOptions.MidlineLeft;
+            text.enableWordWrapping = true;
 
             var buttonGo = new GameObject("TouchInteract");
             buttonGo.transform.SetParent(panel.transform, false);
@@ -76,10 +131,10 @@ namespace RoguePirates.V4.Presentation.Stage
             buttonRect.anchorMax = new Vector2(1f, 0.5f);
             buttonRect.anchoredPosition = new Vector2(-84f, 0f);
             buttonRect.sizeDelta = new Vector2(144f, 72f); // V5 M7: touch targets
-            _button = buttonGo.AddComponent<Button>();
+            var button = buttonGo.AddComponent<Button>();
             var buttonImage = buttonGo.AddComponent<Image>();
             buttonImage.color = PlaceholderFactory.UiAccent;
-            _button.targetGraphic = buttonImage;
+            button.targetGraphic = buttonImage;
 
             var labelGo = new GameObject("Label");
             labelGo.transform.SetParent(buttonGo.transform, false);
@@ -92,18 +147,11 @@ namespace RoguePirates.V4.Presentation.Stage
             label.text = "USE";
             label.alignment = TextAlignmentOptions.Center;
             label.fontSize = 20;
+            buttonGo.AddComponent<EventTrigger>();
 
-            var trigger = buttonGo.AddComponent<EventTrigger>();
-            AddPointerEvent(trigger, EventTriggerType.PointerDown, _ => SetTouchHolding(true));
-            AddPointerEvent(trigger, EventTriggerType.PointerUp, _ => SetTouchHolding(false));
-            AddPointerEvent(trigger, EventTriggerType.PointerExit, _ => SetTouchHolding(false));
-            _button.onClick.AddListener(() => _touch?.TouchPressed());
-            // V5 M7: Skip on the chest choice for touch (R on a keyboard).
-            _skip = PlaceholderFactory.CreateUiButton(panel.transform, "TouchSkip", "SKIP", new Vector2(200f, 72f), "Skip this chest");
-            _skip.onClick.AddListener(() => _touch?.TouchSkip());
-            _skip.gameObject.SetActive(false);
-            SetVisible(false);
-            _built = true;
+            var skip = PlaceholderFactory.CreateUiButton(panel.transform, "TouchSkip", "SKIP", new Vector2(200f, 72f), "Skip this chest");
+            skip.gameObject.SetActive(false);
+            return panel;
         }
 
         void SetTouchHolding(bool holding)

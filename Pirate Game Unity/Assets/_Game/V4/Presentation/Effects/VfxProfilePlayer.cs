@@ -49,7 +49,9 @@ namespace RoguePirates.V4.Presentation.Effects
                 {
                     var slot = profile.Slot(kind);
                     if (slot == null || !slot.HasPrefab) continue;
-                    var prefab = NeedsFallback(slot.prefab, out var fallback, out _) ? fallback : slot.prefab;
+                    var own = OwnPrefab(profile.subject, profile.id, kind); // V5 (visual prefabs): its catalog prefab
+                    var source = own != null ? own : slot.prefab;
+                    var prefab = NeedsFallback(source, out var fallback, out _) ? fallback : source;
                     if (prefab != null) _fx.Register(prefab, PrewarmPerEffect);
                 }
                 foreach (var kind in new[] { VfxSlotKind.Trail, VfxSlotKind.Projectile })
@@ -60,8 +62,38 @@ namespace RoguePirates.V4.Presentation.Effects
                     if (!_pools.Has(key)) _pools.Register(new Pooling.PoolDefinition(key, slot.prefab, PrewarmPerEffect, 0, RoguePirates.V4.Config.ConfigEnums.PoolOverflowPolicy.Grow, "vfx profile trails"));
                 }
             }
+            // V5 (visual prefabs): an enemy's own spawn and death-extra prefabs (elite variants have their own copies of
+            // their base enemy's), prewarmed as the profiles' were.
+            var catalog = Visuals.VisualPick.Catalog;
+            if (catalog != null)
+                foreach (var visual in new[] { Visuals.Visual.Spawn, Visuals.Visual.DeathExtra })
+                    foreach (var (_, prefab) in catalog.All(visual))
+                    {
+                        var p = NeedsFallback(prefab, out var fallback, out _) ? fallback : prefab;
+                        if (p != null) _fx.Register(p, PrewarmPerEffect);
+                    }
             _pools.PrewarmAll();
         }
+
+        /// <summary>V5 (visual prefabs): the catalog's prefab for an enemy's or the ship's profile moment (spawn, death),
+        /// which replaces the profile's art (the profile still decides whether the moment plays, its scale, offset, tint and
+        /// seconds). An elite variant without its own uses its base enemy's. Null: the profile's own prefab.</summary>
+        public GameObject OwnPrefab(VfxSubject subject, string id, VfxSlotKind kind)
+        {
+            if (subject == VfxSubject.Weapon) return null;
+            var visual = kind == VfxSlotKind.Spawn ? Visuals.Visual.Spawn : kind == VfxSlotKind.Death ? Visuals.Visual.DeathExtra : null;
+            if (visual == null) return null;
+            var owner = subject == VfxSubject.PlayerShip ? Visuals.VisualIds.PlayerShip : id;
+            var own = Visuals.VisualPick.Get(owner, visual);
+            if (own == null && subject == VfxSubject.Enemy && id != null && _enemyFallback.TryGetValue(id, out var baseId)) own = Visuals.VisualPick.Get(baseId, visual);
+            return own;
+        }
+
+        /// <summary>V5 (visual prefabs): the enemy id of a live unit (from its Spawned event; null when unknown).</summary>
+        public string EnemyOfUnit(int unitId) => _enemyOfUnit.TryGetValue(unitId, out var id) ? id : null;
+
+        /// <summary>V5 (visual prefabs): the enemy id drawn by a live view (null when unknown).</summary>
+        public string EnemyOfView(Transform view) => view != null && _enemyOfView.TryGetValue(view, out var id) ? id : null;
 
         public VfxSlot Slot(VfxSubject subject, string id, VfxSlotKind kind)
         {
@@ -85,15 +117,20 @@ namespace RoguePirates.V4.Presentation.Effects
         }
 
         /// <summary>Plays the slot's prefab at the pose (offset in the pose's frame); false when the slot has none.</summary>
-        public bool Play(VfxSlot slot, Vector3 position, Quaternion rotation, float baseScale = 1f, Transform parent = null)
+        public bool Play(VfxSlot slot, Vector3 position, Quaternion rotation, float baseScale = 1f, Transform parent = null, GameObject own = null)
         {
             if (slot == null || !slot.HasPrefab || _fx == null) return false;
-            var prefab = slot.prefab;
-            var scale = baseScale * slot.ScaleOrOne;
+            // V5 (visual prefabs): the catalog's prefab for this moment replaces the profile's art; its tuning applies.
+            var prefab = own != null ? own : slot.prefab;
+            var scale = baseScale * slot.ScaleOrOne * Visuals.VisualTuning.Scale(own);
+            var lifetime = slot.lifetime;
+            if (own != null && !Mathf.Approximately(Visuals.VisualTuning.Lifetime(own), 1f))
+                lifetime = (lifetime > 0f ? lifetime : PooledEffects.EstimateLifetime(own)) * Visuals.VisualTuning.Lifetime(own);
+            position.y += Visuals.VisualTuning.Height(own);
             if (NeedsFallback(prefab, out var fallback, out var fallbackScale)) { prefab = fallback; scale *= fallbackScale; }
             if (prefab == null) return false;
             _fx.Register(prefab, 2);
-            var go = _fx.Play(prefab, position + rotation * slot.offset, rotation, scale, slot.lifetime, parent);
+            var go = _fx.Play(prefab, position + rotation * slot.offset, rotation, scale, lifetime, parent);
             if (go == null) return false;
             Restart(go);
             VfxTint.Apply(go, slot.useTint, slot.tint);
@@ -150,8 +187,9 @@ namespace RoguePirates.V4.Presentation.Effects
                 _usesVfxGraph[prefab] = graph = prefab.GetComponentInChildren<UnityEngine.VFX.VisualEffect>(true) != null;
             if (!graph) return false;
             var settings = Resources.Load<DemoJuiceSettings>("DemoJuiceSettings");
-            fallback = settings != null ? settings.vfxGraphFallbackPrefab : null;
-            scale = settings != null ? settings.vfxGraphFallbackScale : 1f;
+            // V5 (visual prefabs): the stand-in's own prefab (Effects/vfx_fallback), else the juice settings'.
+            fallback = Visuals.VisualPick.Pick(Visuals.VisualIds.VfxFallback, Visuals.Visual.Splash, settings != null ? settings.vfxGraphFallbackPrefab : null);
+            scale = (settings != null ? settings.vfxGraphFallbackScale : 1f) * Visuals.VisualTuning.Scale(fallback);
             return true;
         }
 
@@ -177,8 +215,9 @@ namespace RoguePirates.V4.Presentation.Effects
             _enemyOfUnit.TryGetValue(unitId, out var enemyId);
             _enemyOfUnit.Remove(unitId);
             var slot = Slot(VfxSubject.Enemy, enemyId, VfxSlotKind.Death);
-            if (slot == null || !slot.HasPrefab) slot = Slot(VfxSubject.Weapon, weaponId, VfxSlotKind.Death);
-            Play(slot, position, Quaternion.identity);
+            var own = OwnPrefab(VfxSubject.Enemy, enemyId, VfxSlotKind.Death);
+            if (slot == null || !slot.HasPrefab) { slot = Slot(VfxSubject.Weapon, weaponId, VfxSlotKind.Death); own = null; }
+            Play(slot, position, Quaternion.identity, 1f, null, own);
             return slot != null && slot.SuppressesDefault;
         }
 
@@ -193,7 +232,8 @@ namespace RoguePirates.V4.Presentation.Effects
         {
             if (view == null || string.IsNullOrEmpty(enemyId)) return;
             _enemyOfView[view] = enemyId;
-            Play(Slot(VfxSubject.Enemy, enemyId, VfxSlotKind.Spawn), new Vector3(view.position.x, 0f, view.position.z), Quaternion.identity);
+            Play(Slot(VfxSubject.Enemy, enemyId, VfxSlotKind.Spawn), new Vector3(view.position.x, 0f, view.position.z), Quaternion.identity, 1f, null,
+                OwnPrefab(VfxSubject.Enemy, enemyId, VfxSlotKind.Spawn));
             Attach(Slot(VfxSubject.Enemy, enemyId, VfxSlotKind.Trail), view);
         }
 
@@ -221,7 +261,8 @@ namespace RoguePirates.V4.Presentation.Effects
         public void ShipDied()
         {
             var ship = _ship?.Invoke();
-            if (ship != null) Play(Slot(VfxSubject.PlayerShip, VfxProfileLibrary.PlayerShipId, VfxSlotKind.Death), ship.position, ship.rotation);
+            if (ship != null) Play(Slot(VfxSubject.PlayerShip, VfxProfileLibrary.PlayerShipId, VfxSlotKind.Death), ship.position, ship.rotation, 1f, null,
+                OwnPrefab(VfxSubject.PlayerShip, VfxProfileLibrary.PlayerShipId, VfxSlotKind.Death));
         }
 
         /// <summary>The VFX editor's preview: plays a slot at the ship (5 m ahead for weapons and enemies).</summary>

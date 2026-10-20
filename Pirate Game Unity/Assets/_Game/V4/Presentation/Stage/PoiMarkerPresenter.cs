@@ -3,6 +3,7 @@ using RoguePirates.V4.Foundation.Core;
 using RoguePirates.V4.Foundation.Data;
 using RoguePirates.V4.Foundation.POI;
 using RoguePirates.V4.Foundation.World;
+using RoguePirates.V4.Presentation.Visuals;
 using RoguePirates.V4.Stage;
 using UnityEngine;
 
@@ -109,11 +110,13 @@ namespace RoguePirates.V4.Presentation.Stage
                 if (show)
                 {
                     // POIInteractable.UpdateChargeRing: twice the circle radius, pulsing, brighter as it charges.
-                    var size = _view.ChargeRingRadius * 2f;
-                    var pulse = 1f + Mathf.Sin(Time.time * 6f) * 0.04f;
+                    // V5 (visual prefabs): the ring's prefab tuning scales the size, pulse and colour.
+                    var p = _chargePrefab;
+                    var size = _view.ChargeRingRadius * 2f * VisualTuning.Scale(p);
+                    var pulse = 1f + Mathf.Sin(Time.time * 6f * VisualTuning.PulseSpeed(p)) * 0.04f * VisualTuning.Pulse(p);
                     m.ChargeRing.localScale = new Vector3(size * pulse, 0.04f, size * pulse);
                     if (m.ChargeRenderer != null)
-                        m.ChargeRenderer.material.color = new Color(0.2f, 0.75f, 1f, Mathf.Lerp(0.2f, 0.75f, _view.SignalBuoyCharge01(i)));
+                        m.ChargeRenderer.material.color = VisualTuning.Colour(p, new Color(0.2f, 0.75f, 1f, Mathf.Lerp(0.2f, 0.75f, _view.SignalBuoyCharge01(i))));
                 }
             }
 
@@ -124,32 +127,57 @@ namespace RoguePirates.V4.Presentation.Stage
                 if (show)
                 {
                     // POIInteractable.PulseTelegraph.
-                    var pulse = 1f + Mathf.Sin(Time.time * 24f) * 0.08f;
-                    var baseScale = _juice != null ? _juice.bossTelegraphScale : 2.4f;
+                    var p = _telegraphPrefab;
+                    var pulse = 1f + Mathf.Sin(Time.time * 24f * VisualTuning.PulseSpeed(p)) * 0.08f * VisualTuning.Pulse(p);
+                    var baseScale = (_juice != null ? _juice.bossTelegraphScale : 2.4f) * VisualTuning.Scale(p);
                     m.TelegraphRing.localScale = new Vector3(baseScale * pulse, 0.05f, baseScale * pulse);
                 }
             }
         }
 
+        // V5 (visual prefabs): POIs/signal_buoy/signal_buoy_ChargeRing and POIs/treasury_beacon/treasury_beacon_TelegraphRing.
+        GameObject _chargePrefab, _telegraphPrefab;
+
         Transform CreateChargeRing(Transform parent, out Renderer renderer)
+        {
+            _chargePrefab = VisualPick.Get(VisualIds.Poi(POIType.TrialBuoy), Visual.ChargeRing);
+            GameObject ring;
+            if (_chargePrefab != null)
+            {
+                ring = Instantiate(_chargePrefab, parent, false);
+                ring.name = "SignalBuoyChargeRing";
+                ring.transform.localPosition = Vector3.up * (0.05f + VisualTuning.Height(_chargePrefab));
+                renderer = ring.GetComponent<Renderer>();
+            }
+            else
+            {
+                ring = BuildChargeRing();
+                ring.transform.SetParent(parent, false);
+                renderer = ring.GetComponent<Renderer>();
+                renderer.material.color = new Color(0.2f, 0.75f, 1f, 0.45f);
+            }
+            ring.SetActive(false);
+            return ring.transform;
+        }
+
+        /// <summary>The Signal Buoy's charge disc as the code builds it: a collider-less cylinder 0.05 m up (its colour is set
+        /// on use). The visual prefab builder saves it, with that colour in its own material, as signal_buoy_ChargeRing.</summary>
+        public static GameObject BuildChargeRing()
         {
             var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             ring.name = "SignalBuoyChargeRing";
-            ring.transform.SetParent(parent, false);
             ring.transform.localPosition = Vector3.up * 0.05f;
-            renderer = ring.GetComponent<Renderer>();
-            renderer.material.color = new Color(0.2f, 0.75f, 1f, 0.45f);
             StripColliders(ring);
-            ring.SetActive(false);
-            return ring.transform;
+            return ring;
         }
 
         Transform CreateTelegraphRing(Transform parent)
         {
             var scale = _juice != null ? _juice.bossTelegraphScale : 2.4f;
             GameObject ring;
-            if (_juice != null && _juice.bossTelegraphRingPrefab != null)
-                ring = Instantiate(_juice.bossTelegraphRingPrefab, parent.position, Quaternion.identity, parent);
+            _telegraphPrefab = VisualPick.Pick(VisualIds.Poi(POIType.BossBeacon), Visual.TelegraphRing, _juice != null ? _juice.bossTelegraphRingPrefab : null);
+            if (_telegraphPrefab != null)
+                ring = Instantiate(_telegraphPrefab, parent.position, Quaternion.identity, parent);
             else
             {
                 ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -159,7 +187,7 @@ namespace RoguePirates.V4.Presentation.Stage
                 StripColliders(ring);
             }
             ring.name = "BossTelegraph";
-            ring.transform.localScale = new Vector3(scale, 0.05f, scale);
+            ring.transform.localScale = new Vector3(scale * VisualTuning.Scale(_telegraphPrefab), 0.05f, scale * VisualTuning.Scale(_telegraphPrefab));
             ring.SetActive(false);
             return ring.transform;
         }
@@ -205,9 +233,9 @@ namespace RoguePirates.V4.Presentation.Stage
 
         GameObject CreatePrefabMarker(POIType type, GameObject prefab, Vector3 spawnPos, Transform root)
         {
-            var go = Instantiate(prefab, spawnPos, Quaternion.identity, root);
+            var go = Instantiate(prefab, spawnPos + Vector3.up * VisualTuning.Height(prefab), Quaternion.identity, root);
             go.name = type.ToString();
-            go.transform.localScale *= Scale(type);
+            go.transform.localScale *= Scale(type) * VisualTuning.Scale(prefab);
             if (type == POIType.SalvageChest)
             {
                 SalvageChestWaterFloat.Attach(go, _juice);
@@ -225,6 +253,9 @@ namespace RoguePirates.V4.Presentation.Stage
 
         GameObject GetPrefab(POIType type)
         {
+            // V5 (visual prefabs): the POI's model from the visual catalog (POIs/<id>, or the Demo/POI prefab it lists).
+            var own = VisualPick.Get(VisualIds.Poi(type), Visual.Model);
+            if (own != null) return own;
             if (_juice == null) return null;
             return type switch
             {

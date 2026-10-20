@@ -46,8 +46,11 @@ namespace RoguePirates.V4.Presentation.Effects
             _pools = pools;
             _settings = settings;
             _splash = splash;
-            _template = BuildTemplate();
-            if (_pools != null) _template.transform.SetParent(_pools.Staging, false);
+            // V5 (visual prefabs): Enemies/enemy/enemy_Shot (the iron ball and its fire trail as an editable prefab), else
+            // the code-built template as before.
+            _prefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.Enemy, RoguePirates.V4.Presentation.Visuals.Visual.Shot);
+            _template = _prefab != null ? _prefab : BuildTemplate(_materials);
+            if (_pools != null && _prefab == null) _template.transform.SetParent(_pools.Staging, false);
             _key = KeyPrefix + _template.name;
             if (_pools != null && !_pools.Has(_key))
             {
@@ -64,13 +67,13 @@ namespace RoguePirates.V4.Presentation.Effects
             if (go == null) return null;
             var sizeMult = _settings != null ? _settings.projectileSizeMultiplier : 1.2f;
             var radius = visualRadius * (_settings != null ? _settings.projectileRadiusMultiplier : 1f);
-            var size = Mathf.Max(MinSize, radius * 2f * sizeMult * SizeBoost);
+            var size = Mathf.Max(MinSize, radius * 2f * sizeMult * SizeBoost) * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(_prefab);
             go.transform.localScale = Vector3.one * size;
             var trail = Trail(go);
             if (trail != null)
             {
                 trail.Clear(); // a reused shot does not draw a line from where its last life ended
-                trail.widthMultiplier = size * TrailWidth;
+                trail.widthMultiplier = size * TrailWidth * RoguePirates.V4.Presentation.Visuals.VisualTuning.Width(_prefab);
                 trail.emitting = true;
             }
             LiveCount++;
@@ -90,7 +93,7 @@ namespace RoguePirates.V4.Presentation.Effects
 
         public void Dispose()
         {
-            if (_template != null) Remove(_template);
+            if (_template != null && _prefab == null) Remove(_template); // the catalog's prefab is an asset, not ours
             _template = null;
             foreach (var m in _materials) if (m != null) Remove(m);
             _materials.Clear();
@@ -105,8 +108,12 @@ namespace RoguePirates.V4.Presentation.Effects
             return trail;
         }
 
-        /// <summary>The iron ball: a collider-less sphere, its fire-and-smoke trail, as the pool template.</summary>
-        GameObject BuildTemplate()
+        GameObject _prefab;
+
+        /// <summary>The iron ball: a collider-less sphere, its fire-and-smoke trail, as the pool template. The materials it
+        /// makes go in <paramref name="owned"/> (the visual prefab builder saves them as assets beside
+        /// Enemies/enemy/enemy_Shot.prefab).</summary>
+        public static GameObject BuildTemplate(List<Material> owned)
         {
             var root = new GameObject("HostileCannonball");
             root.SetActive(false);
@@ -116,11 +123,11 @@ namespace RoguePirates.V4.Presentation.Effects
             Object.DestroyImmediate(ball.GetComponent<Collider>()); // before the pool clones the template
             ball.transform.SetParent(root.transform, false);
             var ballRenderer = ball.GetComponent<MeshRenderer>();
-            ballRenderer.sharedMaterial = Iron();
+            ballRenderer.sharedMaterial = Iron(owned);
             ballRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
             var trail = root.AddComponent<TrailRenderer>();
-            trail.sharedMaterial = Translucent(Color.white, "HostileShotTrail");
+            trail.sharedMaterial = Translucent(Color.white, "HostileShotTrail", owned);
             trail.time = 0.5f;
             trail.minVertexDistance = 0.1f;
             trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.4f, 0.75f), new Keyframe(1f, 0.25f));
@@ -135,7 +142,7 @@ namespace RoguePirates.V4.Presentation.Effects
         }
 
         /// <summary>Dark iron with a little shine (lit, so it reads as a solid ball, not a glowing pickup).</summary>
-        Material Iron()
+        static Material Iron(List<Material> owned)
         {
             var shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
@@ -145,14 +152,14 @@ namespace RoguePirates.V4.Presentation.Effects
             if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0.7f);
             if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.55f);
             if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.55f);
-            _materials.Add(m);
+            owned?.Add(m);
             return m;
         }
 
-        Material Translucent(Color color, string name)
+        static Material Translucent(Color color, string name, List<Material> owned)
         {
             var m = new Material(Shader.Find("Sprites/Default")) { name = name, hideFlags = HideFlags.DontSave, color = color };
-            _materials.Add(m);
+            owned?.Add(m);
             return m;
         }
 

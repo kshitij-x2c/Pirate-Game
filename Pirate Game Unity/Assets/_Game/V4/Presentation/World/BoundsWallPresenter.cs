@@ -49,7 +49,9 @@ namespace RoguePirates.V4.Presentation.World
             _ship = ship;
             if (_west == null)
             {
-                var resource = Resources.Load<GameObject>(DefaultPrefabResource);
+                // V5 (visual prefabs): the wall panel the visual catalog lists (World/bounds_wall: the Resources prefab).
+                var resource = RoguePirates.V4.Presentation.Visuals.VisualPick.Pick(RoguePirates.V4.Presentation.Visuals.VisualIds.BoundsWall, RoguePirates.V4.Presentation.Visuals.Visual.Wall, null);
+                if (resource == null || resource.GetComponent<PlayBoundsWallSegment>() == null) resource = Resources.Load<GameObject>(DefaultPrefabResource);
                 var prefab = resource != null ? resource.GetComponent<PlayBoundsWallSegment>() : null;
                 _west = CreateWall("WestWall", Vector3.left, prefab);
                 _east = CreateWall("EastWall", Vector3.right, prefab);
@@ -101,9 +103,10 @@ namespace RoguePirates.V4.Presentation.World
             SetWarning(halfX > 0f && halfZ > 0f && clearance < WarnDistance);
             if (_warning != null && _warningCanvas.activeSelf)
             {
-                var pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f);
+                // V5 (visual prefabs): the warning prefab's tuning sets the pulse's size and speed.
+                var pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f * RoguePirates.V4.Presentation.Visuals.VisualTuning.PulseSpeed(_warningPrefab));
                 _warning.alpha = Mathf.Lerp(0.55f, 1f, pulse);
-                _warning.transform.localScale = Vector3.one * Mathf.Lerp(1f, 1.08f, pulse);
+                _warning.transform.localScale = Vector3.one * Mathf.Lerp(1f, 1f + 0.08f * RoguePirates.V4.Presentation.Visuals.VisualTuning.Pulse(_warningPrefab), pulse);
             }
         }
 
@@ -112,35 +115,55 @@ namespace RoguePirates.V4.Presentation.World
             if (_warningCanvas != null && _warningCanvas.activeSelf != on) _warningCanvas.SetActive(on);
         }
 
+        GameObject _warningPrefab;
+
         void CreateWarning()
         {
-            _warningCanvas = new GameObject("StormEdgeWarning", typeof(RectTransform));
+            // V5 (visual prefabs): World/storm_edge/storm_edge_Warning (its own canvas and "Text"), else code-built.
+            _warningPrefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.StormEdge, RoguePirates.V4.Presentation.Visuals.Visual.Warning);
+            if (_warningPrefab != null)
+            {
+                _warningCanvas = Instantiate(_warningPrefab, transform, false);
+                _warningCanvas.name = "StormEdgeWarning";
+                _warning = _warningCanvas.GetComponentInChildren<TextMeshProUGUI>(true);
+                return;
+            }
+            _warningCanvas = BuildWarning(out _warning);
             _warningCanvas.transform.SetParent(transform, false);
-            var canvas = _warningCanvas.AddComponent<Canvas>();
+        }
+
+        /// <summary>The storm edge warning as the code builds it: its own overlay canvas (sorting 40, scaled from 1920x1080)
+        /// and a bold red outlined "Text" under the top of the screen. The visual prefab builder saves it as
+        /// World/storm_edge/storm_edge_Warning.prefab.</summary>
+        public static GameObject BuildWarning(out TextMeshProUGUI warning)
+        {
+            var warningCanvas = new GameObject("StormEdgeWarning", typeof(RectTransform));
+            var canvas = warningCanvas.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 40;
-            var scaler = _warningCanvas.AddComponent<CanvasScaler>();
+            var scaler = warningCanvas.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
             var textGo = new GameObject("Text", typeof(RectTransform));
-            textGo.transform.SetParent(_warningCanvas.transform, false);
+            textGo.transform.SetParent(warningCanvas.transform, false);
             var rt = (RectTransform)textGo.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
             rt.sizeDelta = new Vector2(1200f, 90f);
             rt.anchoredPosition = new Vector2(0f, -110f);
-            _warning = textGo.AddComponent<TextMeshProUGUI>();
-            _warning.text = WarningText;
-            _warning.fontSize = 56f;
-            _warning.fontStyle = FontStyles.Bold;
-            _warning.color = new Color(1f, 0.32f, 0.25f, 1f);
-            _warning.alignment = TextAlignmentOptions.Center;
-            _warning.enableWordWrapping = false;
-            _warning.raycastTarget = false;
-            _warning.outlineWidth = 0.25f;
-            _warning.outlineColor = new Color32(0, 0, 0, 255);
+            warning = textGo.AddComponent<TextMeshProUGUI>();
+            warning.text = WarningText;
+            warning.fontSize = 56f;
+            warning.fontStyle = FontStyles.Bold;
+            warning.color = new Color(1f, 0.32f, 0.25f, 1f);
+            warning.alignment = TextAlignmentOptions.Center;
+            warning.enableWordWrapping = false;
+            warning.raycastTarget = false;
+            warning.outlineWidth = 0.25f;
+            warning.outlineColor = new Color32(0, 0, 0, 255);
+            return warningCanvas;
         }
 
         static float EdgeFade(float clearance) =>

@@ -139,8 +139,9 @@ namespace RoguePirates.V4.Presentation.Effects
                 var view = _timedViews[ring.View];
                 ShowPair(view.Outline, view.Fill, true);
                 var progress = 1f - Mathf.Clamp01(ring.Left / ring.Total);
-                var width = Weapons.WeaponVisualTuning.Width(view.Prefab);
-                var color = Weapons.WeaponVisualTuning.Colour(view.Prefab, TimedColor);
+                // A weapon's ring carries a WeaponVisualTuning, the items' shared ring (Effects/item_ring) a VisualTuning.
+                var width = Weapons.WeaponVisualTuning.Width(view.Prefab) * Visuals.VisualTuning.Width(view.Prefab);
+                var color = Visuals.VisualTuning.Colour(view.Prefab, Weapons.WeaponVisualTuning.Colour(view.Prefab, TimedColor));
                 SetCircle(view.Outline, ring.Center, ring.Radius, color, 0.3f * width);
                 SetCircle(view.Fill, ring.Center, Mathf.Max(0.05f, ring.Radius * progress), new Color(color.r, color.g, color.b, color.a / TimedColor.a * (0.55f + 0.4f * progress)), 0.45f * width);
             }
@@ -179,17 +180,18 @@ namespace RoguePirates.V4.Presentation.Effects
                 if (kind == HazardKind.WarningLine)
                 {
                     Show(i, true);
-                    SetLane(_outline[i], _fill[i], center, hazard.direction, hazard.length, radius, 1f - Mathf.Clamp01(timer / _fuseTotal[i]));
+                    SetLane(_outline[i], _fill[i], center, hazard.direction, hazard.length, radius, 1f - Mathf.Clamp01(timer / _fuseTotal[i]), Visuals.VisualTuning.Colour(_hazardPrefab, WarningColor), Visuals.VisualTuning.Width(_hazardPrefab));
                     continue;
                 }
 
-                var color = kind == HazardKind.Mine ? MineColor : kind == HazardKind.NetSlow ? NetColor : kind == HazardKind.Warning ? WarningColor : TrapColor;
+                var color = Visuals.VisualTuning.Colour(_hazardPrefab, kind == HazardKind.Mine ? MineColor : kind == HazardKind.NetSlow ? NetColor : kind == HazardKind.Warning ? WarningColor : TrapColor);
                 // Mines: fill while arming, then a full ring while armed. Traps: fill as the fuse runs down. Nets: full.
                 var armed = kind == HazardKind.Mine && hazard.armed;
                 var progress = kind == HazardKind.NetSlow || armed ? 1f : 1f - Mathf.Clamp01(timer / _fuseTotal[i]);
                 Show(i, true);
-                SetCircle(_outline[i], center, radius, color, 0.3f);
-                SetCircle(_fill[i], center, Mathf.Max(0.05f, radius * progress), new Color(color.r, color.g, color.b, 0.55f + 0.4f * progress), 0.45f);
+                var w = Visuals.VisualTuning.Width(_hazardPrefab);
+                SetCircle(_outline[i], center, radius, color, 0.3f * w);
+                SetCircle(_fill[i], center, Mathf.Max(0.05f, radius * progress), new Color(color.r, color.g, color.b, 0.55f + 0.4f * progress), 0.45f * w);
             }
         }
 
@@ -259,12 +261,17 @@ namespace RoguePirates.V4.Presentation.Effects
             _fuseTotal = new float[count];
             _lastCenter = new Vector3[count];
             _wasActive = new bool[count];
+            // V5 (visual prefabs): the enemies' telegraph rings and lanes from Enemies/enemy/enemy_TelegraphRing (a
+            // LineRenderer; its tuning sets the width and can set one colour), else code-built as before.
+            _hazardPrefab = Visuals.VisualPick.Get(Visuals.VisualIds.Enemy, Visuals.Visual.TelegraphRing);
             for (var i = 0; i < count; i++)
             {
-                _outline[i] = CreateRing("HazardOutline" + i);
-                _fill[i] = CreateRing("HazardFill" + i);
+                _outline[i] = CreateRing("HazardOutline" + i, _hazardPrefab);
+                _fill[i] = CreateRing("HazardFill" + i, _hazardPrefab);
             }
         }
+
+        GameObject _hazardPrefab;
 
         /// <summary>A ring line: an instance of <paramref name="prefab"/> (a LineRenderer at its root; Hackathon), else code-built.</summary>
         LineRenderer CreateRing(string name, GameObject prefab = null)
@@ -303,22 +310,22 @@ namespace RoguePirates.V4.Presentation.Effects
 
         /// <summary>Playtest (3 Oct, owner, round 7): a lane: its outline as a rectangle and a translucent strip that runs
         /// from the attacker to the lane's end as the attack comes.</summary>
-        static void SetLane(LineRenderer outline, LineRenderer fill, Vector3 start, Vector3 direction, float length, float halfWidth, float progress)
+        static void SetLane(LineRenderer outline, LineRenderer fill, Vector3 start, Vector3 direction, float length, float halfWidth, float progress, Color warning, float width)
         {
             var side = Vector3.Cross(Vector3.up, direction) * halfWidth;
             var end = start + direction * length;
             start.y = end.y = Height;
             outline.loop = true;
             outline.positionCount = 4;
-            outline.startColor = outline.endColor = WarningColor;
-            outline.widthMultiplier = 0.3f;
+            outline.startColor = outline.endColor = warning;
+            outline.widthMultiplier = 0.3f * width;
             outline.SetPosition(0, start + side);
             outline.SetPosition(1, end + side);
             outline.SetPosition(2, end - side);
             outline.SetPosition(3, start - side);
             fill.loop = false;
             fill.positionCount = 2;
-            var c = new Color(WarningColor.r, WarningColor.g, WarningColor.b, 0.3f + 0.35f * progress);
+            var c = new Color(warning.r, warning.g, warning.b, 0.3f + 0.35f * progress);
             fill.startColor = fill.endColor = c;
             fill.widthMultiplier = halfWidth * 2f * 0.85f;
             fill.SetPosition(0, start);

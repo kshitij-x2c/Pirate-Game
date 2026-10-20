@@ -110,9 +110,14 @@ namespace RoguePirates.V4.Presentation
                 InstallWorld(game, views);
                 InstallLevelUp(game, views);
                 InstallVfxProfiles(views);
-                // Demo: the chosen Captain's sail and flag on the player ship.
+                // Demo: the chosen Captain's sail and flag on the player ship. V5 (visual prefabs): from the Captain's ship
+                // look prefab (Captains/<captain>/<captain>_ShipLook), else the HUD settings' sail and flag as before.
                 if (views.Ship != null && views.Captain != null)
-                    RoguePirates.V4.Presentation.Hud.SaltWindHudSettings.Load()?.ApplyShipLook(views.Ship.Anchor, views.Captain.CaptainId);
+                {
+                    var look = Visuals.VisualPick.Get(CaptainKey(game.Config, views.Captain.CaptainId), Visuals.Visual.ShipLook);
+                    if (look == null || Visuals.ShipLook.Apply(views.Ship.Anchor, look) < 0)
+                        RoguePirates.V4.Presentation.Hud.SaltWindHudSettings.Load()?.ApplyShipLook(views.Ship.Anchor, views.Captain.CaptainId);
+                }
             }
             if (game.Context != null) InstallStage(game);
             if (game.Context != null) InstallNarrative(game);
@@ -121,6 +126,15 @@ namespace RoguePirates.V4.Presentation
             var run = GameObject.Find("RunCanvas");
             if (run != null && run.TryGetComponent<Canvas>(out var runCanvasForSafeArea)) RoguePirates.V4.Foundation.UI.SafeAreaFitter.Wrap(runCanvasForSafeArea);
             RoguePirates.V4.Foundation.UI.UiScale.ApplyAll();
+        }
+
+        /// <summary>V5 (visual prefabs): a Captain's key (its visual prefabs' id) from its legacy id; null when unknown.</summary>
+        public static string CaptainKey(RoguePirates.V4.Config.ConfigSetRuntime config, int legacyId)
+        {
+            if (config == null) return null;
+            foreach (var c in config.All<RoguePirates.V4.Config.CaptainConfig>())
+                if (c != null && c.legacyId == legacyId) return c.captainKey;
+            return null;
         }
 
         /// <summary>Demo (30 Sep 2026): the artists' VFX profiles, handed to the presenters that play each moment.</summary>
@@ -403,6 +417,8 @@ namespace RoguePirates.V4.Presentation
                     CaptainActive = RoguePirates.V4.Presentation.Hud.CaptainActivePresenter.Create(authored.transform);
                     CaptainActive.Bind(views);
                     CaptainActiveEffect = RoguePirates.V4.Presentation.Hud.CaptainActiveEffectPresenter.Create(authored.transform);
+                    var config = Game != null ? Game.Config : null;
+                    CaptainActiveEffect.CaptainKeyOf = id => CaptainKey(config, id); // V5: the Captain's own ring prefab
                     CaptainActiveEffect.Bind(views);
                     // V5: the ability's round touch button (touch devices only; it hides itself elsewhere).
                     CaptainAbilityButton = RoguePirates.V4.Presentation.Hud.CaptainAbilityButtonPresenter.Create(authored.transform);

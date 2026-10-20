@@ -32,7 +32,9 @@ namespace RoguePirates.V4.Presentation.World
             _pools = pools;
             _ship = ship;
             _settings = settings;
-            var prefab = settings != null ? settings.enemyHealthBarPrefab : null;
+            // V5 (visual prefabs): the ship's own bar (Player/player_ship/player_ship_HealthBar), else the enemies' bar.
+            var prefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Pick(RoguePirates.V4.Presentation.Visuals.VisualIds.PlayerShip, RoguePirates.V4.Presentation.Visuals.Visual.HealthBar, settings != null ? settings.enemyHealthBarPrefab : null);
+            _prefab = prefab;
             if (_pools == null || prefab == null) return;
             if (!_pools.Has(Key))
             {
@@ -70,8 +72,10 @@ namespace RoguePirates.V4.Presentation.World
                 if (_bar == null) _bar = _barGo.AddComponent<WorldHealthBar>();
             }
             _anchor = anchor;
-            _bar.Bind(anchor, _settings.playerHealthBarHeight);
+            _bar.Bind(anchor, _settings.playerHealthBarHeight + RoguePirates.V4.Presentation.Visuals.VisualTuning.Height(_prefab));
         }
+
+        GameObject _prefab;
 
         // Playtest (3 Oct): on teardown the pool service is disposed first and destroys its own instances; releasing into it
         // only logged "was not acquired from a pool". Just drop the references.

@@ -31,11 +31,15 @@ namespace RoguePirates.V4.Presentation.Effects
             _pools = pools;
             foreach (PowerupKind kind in Enum.GetValues(typeof(PowerupKind)))
             {
-                var template = PlaceholderFactory.CreateFloorPowerup((FloorPowerupKind)(int)kind, Vector3.zero, null);
-                if (template == null) continue;
-                template.SetActive(false);
-                template.transform.SetParent(_pools.Staging, true);
-                _templates.Add(template);
+                // V5 (visual prefabs): the powerup's own prefab (Powerups/<id>/<id>_Model), else the code-built placeholder.
+                var template = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.Powerup(kind), RoguePirates.V4.Presentation.Visuals.Visual.Model);
+                if (template == null)
+                {
+                    template = BuildTemplate(kind);
+                    if (template == null) continue;
+                    template.transform.SetParent(_pools.Staging, true);
+                    _templates.Add(template);
+                }
                 var key = KeyPrefix + kind;
                 if (!_pools.Has(key))
                 {
@@ -44,6 +48,15 @@ namespace RoguePirates.V4.Presentation.Effects
                 }
                 _keys[kind] = key;
             }
+        }
+
+        /// <summary>The code-built placeholder for a kind (V3's PlaceholderFactory floor powerup with its name label), inactive.
+        /// The visual prefab builder saves it as Powerups/&lt;id&gt;/&lt;id&gt;_Model.prefab.</summary>
+        public static GameObject BuildTemplate(PowerupKind kind)
+        {
+            var template = PlaceholderFactory.CreateFloorPowerup((FloorPowerupKind)(int)kind, Vector3.zero, null);
+            if (template != null) template.SetActive(false);
+            return template;
         }
 
         public object Create(PowerupKind kind, Vector3 position)

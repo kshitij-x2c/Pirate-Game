@@ -74,11 +74,14 @@ namespace RoguePirates.V4.Tests
             var host = new GameObject("VfxTestPresenter");
             _owned.Add(host);
             _presenter = host.AddComponent<WeaponVfxPresenter>();
+            // V5: these tests check the juice settings' shared effects, so no visual catalog (its shared prefabs would win).
+            RoguePirates.V4.Presentation.Visuals.VisualPick.Catalog = null;
         }
 
         [TearDown]
         public void TearDown()
         {
+            RoguePirates.V4.Presentation.Visuals.VisualPick.ResetCatalog();
             if (_presenter != null) _presenter.Clear();
             _pools.Dispose();
             foreach (var o in _owned) if (o != null) Object.DestroyImmediate(o);

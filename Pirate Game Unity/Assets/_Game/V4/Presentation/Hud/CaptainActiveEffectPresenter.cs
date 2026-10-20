@@ -59,12 +59,50 @@ namespace RoguePirates.V4.Presentation.Hud
 
             var ringGo = new GameObject("V4CaptainActiveRing");
             _ring = ringGo.AddComponent<LineRenderer>();
+            ConfigureRing(_ring);
+            _ring.material = new Material(Shader.Find("Sprites/Default"));
+            _ownsRingMaterial = true;
+            _ring.enabled = false;
+        }
+
+        /// <summary>The ring line's settings as the code makes it (the visual prefab builder saves it per Captain, with a
+        /// Sprites/Default material asset, as Captains/&lt;captain&gt;/&lt;captain&gt;_ActiveRing.prefab).</summary>
+        public static void ConfigureRing(LineRenderer ring)
+        {
+            ring.useWorldSpace = true;
+            ring.loop = true;
+            ring.positionCount = RingPoints;
+            ring.widthMultiplier = 0.35f;
+        }
+
+        // V5 (visual prefabs): the Captain's own ring prefab (its width and material; its tuning sets the size, height,
+        // pulse and can set the colour) replaces the code-built ring once the Captain is known.
+        GameObject _ringPrefab;
+        bool _ownsRingMaterial;
+
+        /// <summary>The Captain's key from its legacy id (set by the presentation root; the ring prefab is per Captain).</summary>
+        public System.Func<int, string> CaptainKeyOf { get; set; }
+
+        void UseCaptainRing(int captainId)
+        {
+            var key = CaptainKeyOf?.Invoke(captainId);
+            var prefab = key != null ? RoguePirates.V4.Presentation.Visuals.VisualPick.Get(key, RoguePirates.V4.Presentation.Visuals.Visual.ActiveRing) : null;
+            if (prefab == null || prefab == _ringPrefab || prefab.GetComponent<LineRenderer>() == null) return;
+            var old = _ring;
+            var go = Instantiate(prefab);
+            go.name = "V4CaptainActiveRing";
+            _ring = go.GetComponent<LineRenderer>();
             _ring.useWorldSpace = true;
             _ring.loop = true;
             _ring.positionCount = RingPoints;
-            _ring.widthMultiplier = 0.35f;
-            _ring.material = new Material(Shader.Find("Sprites/Default"));
             _ring.enabled = false;
+            _ringPrefab = prefab;
+            if (old != null)
+            {
+                if (_ownsRingMaterial && old.sharedMaterial != null) Destroy(old.sharedMaterial);
+                Destroy(old.gameObject);
+            }
+            _ownsRingMaterial = false;
         }
 
         static TextMeshProUGUI MakeText(Transform parent, string name, float size, Vector2 offset, FontStyles style)
@@ -93,6 +131,7 @@ namespace RoguePirates.V4.Presentation.Hud
         {
             _views = views;
             _seenUses = views?.Captain != null ? views.Captain.ActiveUses : 0;
+            if (views?.Captain != null) UseCaptainRing(views.Captain.CaptainId);
         }
 
         void LateUpdate()
@@ -153,23 +192,25 @@ namespace RoguePirates.V4.Presentation.Hud
             if (_ring.enabled != show) _ring.enabled = show;
             if (!show) return;
             var duration = Mathf.Max(0.01f, captain.ActiveEffectDuration);
-            var pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f);
-            var color = Bright(captain.ThemeColor);
-            color.a = Mathf.Lerp(0.55f, 1f, pulse) * Mathf.Clamp01(remaining / Mathf.Min(0.6f, duration) );
+            var p = _ringPrefab; // V5: its tuning (1 and 0 without one)
+            var pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f * RoguePirates.V4.Presentation.Visuals.VisualTuning.PulseSpeed(p));
+            var color = RoguePirates.V4.Presentation.Visuals.VisualTuning.Colour(p, Bright(captain.ThemeColor));
+            color.a *= Mathf.Lerp(0.55f, 1f, pulse) * Mathf.Clamp01(remaining / Mathf.Min(0.6f, duration) ); // Bright() is opaque
             _ring.startColor = _ring.endColor = color;
             var center = ship.Position;
-            var radius = RingRadius * (1f + 0.05f * pulse);
+            var radius = RingRadius * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(p) * (1f + 0.05f * RoguePirates.V4.Presentation.Visuals.VisualTuning.Pulse(p) * pulse);
+            var height = RingHeight + RoguePirates.V4.Presentation.Visuals.VisualTuning.Height(p);
             for (var i = 0; i < RingPoints; i++)
             {
                 var a = i * Mathf.PI * 2f / RingPoints;
-                _ring.SetPosition(i, new Vector3(center.x + Mathf.Cos(a) * radius, RingHeight, center.z + Mathf.Sin(a) * radius));
+                _ring.SetPosition(i, new Vector3(center.x + Mathf.Cos(a) * radius, height, center.z + Mathf.Sin(a) * radius));
             }
         }
 
         void OnDestroy()
         {
             if (_ring == null) return;
-            if (_ring.sharedMaterial != null) Destroy(_ring.sharedMaterial);
+            if (_ownsRingMaterial && _ring.sharedMaterial != null) Destroy(_ring.sharedMaterial);
             Destroy(_ring.gameObject);
         }
     }

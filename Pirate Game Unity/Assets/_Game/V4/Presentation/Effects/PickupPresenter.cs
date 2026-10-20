@@ -29,6 +29,10 @@ namespace RoguePirates.V4.Presentation.Effects
         readonly Dictionary<int, ParticleSystem[]> _burst = new Dictionary<int, ParticleSystem[]>();
         readonly HashSet<int> _prepared = new HashSet<int>();
         GameObject _gem, _flyingHealth, _primitive;
+        GameObject _goldBarrel, _xpBarrel, _coin, _healthBarrel;
+
+        static GameObject Own(PickupType type, GameObject fallback) =>
+            RoguePirates.V4.Presentation.Visuals.VisualPick.Pick(RoguePirates.V4.Presentation.Visuals.VisualIds.Pickup(type), RoguePirates.V4.Presentation.Visuals.Visual.Model, fallback);
 
         public int LiveCount { get; private set; }
 
@@ -38,15 +42,25 @@ namespace RoguePirates.V4.Presentation.Effects
             _s = settings;
             if (_s != null)
             {
+                // V5 (visual prefabs): each pickup's own prefab from the visual catalog (Pickups/<id>/<id>_Model), else the
+                // juice settings' prefab (and the code-built gem and health billboard) as before.
+                _goldBarrel = Own(PickupType.GoldBarrel, _s.goldBarrelPickupPrefab != null ? _s.goldBarrelPickupPrefab : _s.goldPickupPrefab);
+                _xpBarrel = Own(PickupType.XpBarrel, _s.xpBarrelPickupPrefab != null ? _s.xpBarrelPickupPrefab : _s.infamyPickupPrefab);
+                _coin = Own(PickupType.Gold, _s.goldPickupPrefab);
+                _healthBarrel = Own(PickupType.Powerup, _s.healthPickupPrefab);
                 // Prewarm for peak load (M14.15: six weapons, ~70 enemies peaked at 101 XP, 75 gold and 15 health barrels).
-                Register(_s.goldBarrelPickupPrefab != null ? _s.goldBarrelPickupPrefab : _s.goldPickupPrefab, 80);
-                Register(_s.xpBarrelPickupPrefab != null ? _s.xpBarrelPickupPrefab : _s.infamyPickupPrefab, 112);
-                Register(_s.goldPickupPrefab, 24);
-                Register(_s.healthPickupPrefab, 16);
+                Register(_goldBarrel, 80);
+                Register(_xpBarrel, 112);
+                Register(_coin, 24);
+                Register(_healthBarrel, 16);
                 Register(_s.infamyPickupPrefab, 4);
+                var gem = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.Pickup(PickupType.FlyingXp), RoguePirates.V4.Presentation.Visuals.Visual.Model);
                 var gemSource = _s.xpFlyingGemPrefab != null ? _s.xpFlyingGemPrefab : _s.infamyPickupPrefab;
-                if (gemSource != null) _gem = RegisterTemplate(GemTemplate(gemSource), 64);
-                _flyingHealth = RegisterTemplate(FlyingHealthTemplate(), 12);
+                if (gem != null) { _gem = gem; Register(gem, 64); }
+                else if (gemSource != null) _gem = RegisterTemplate(GemTemplate(gemSource), 64);
+                var health = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.Pickup(PickupType.FlyingHealth), RoguePirates.V4.Presentation.Visuals.Visual.Model);
+                if (health != null) { _flyingHealth = health; Register(health, 12); }
+                else _flyingHealth = RegisterTemplate(FlyingHealthTemplate(), 12);
             }
             else _primitive = RegisterTemplate(PrimitiveTemplate(), 16);
         }
@@ -68,10 +82,11 @@ namespace RoguePirates.V4.Presentation.Effects
                 if (billboard != null)
                 {
                     // V3 re-configured (a new material) on every use; once per pooled billboard is the same look.
-                    if (firstUse) billboard.Configure(_s.healthBurstMaterial, _s.healthBurstColor);
+                    // V5 (visual prefabs): the prefab's own material and the tuning's colour, when it has them.
+                    if (firstUse) billboard.Configure(OwnMaterial(prefab) ?? _s.healthBurstMaterial, RoguePirates.V4.Presentation.Visuals.VisualTuning.Colour(prefab, _s.healthBurstColor));
                     billboard.ResetLifetime();
                 }
-                view.localScale = Vector3.one * _s.healthFlyingPickupScale;
+                view.localScale = Vector3.one * (_s.healthFlyingPickupScale * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab));
             }
             else if (prefab == _primitive)
             {
@@ -80,7 +95,7 @@ namespace RoguePirates.V4.Presentation.Effects
             }
             else
             {
-                var scale = ScaleFor(type);
+                var scale = ScaleFor(type) * (prefab == _gem ? 1f : RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab)); // the gem's is in GemScale
                 view.localScale = IsBarrel(type) ? new Vector3(scale, scale * _s.barrelVerticalScale, scale) : Vector3.one * scale;
                 if (IsFlyingBurst(type)) PlayBurst(go);
             }
@@ -107,7 +122,7 @@ namespace RoguePirates.V4.Presentation.Effects
         {
             var t = (Transform)view;
             if ((type == PickupType.Gold || type == PickupType.FlyingGold || type == PickupType.FlyingXp) && _s != null)
-                t.localScale = Vector3.one * (type == PickupType.FlyingXp ? GemScale : _s.goldFlyingCoinScale);
+                t.localScale = Vector3.one * (type == PickupType.FlyingXp ? GemScale : _s.goldFlyingCoinScale * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(_coin));
             else if (type == PickupType.Infamy)
                 UniformScale(type, t);
         }
@@ -119,7 +134,7 @@ namespace RoguePirates.V4.Presentation.Effects
             t.position = position;
             UniformScale(type, t);
             if (!homing && type != PickupType.GoldBarrel && type != PickupType.XpBarrel && type != PickupType.Powerup)
-                t.Rotate(0f, 180f * dt, 0f, Space.World);
+                t.Rotate(0f, 180f * RoguePirates.V4.Presentation.Visuals.VisualTuning.Spin(PrefabFor(type)) * dt, 0f, Space.World);
         }
 
         public void Release(object view, PickupType type, int value)
@@ -138,7 +153,14 @@ namespace RoguePirates.V4.Presentation.Effects
 
         // ---- V3 PickupViewPool tables ----------------------------------------------------------------------------
 
-        float GemScale => _s != null ? _s.xpFlyingGemScale : 0.6375f;
+        float GemScale => (_s != null ? _s.xpFlyingGemScale : 0.6375f) * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(_gem);
+
+        /// <summary>V5 (visual prefabs): a pickup prefab's own billboard material (the flying health plus), else null.</summary>
+        static Material OwnMaterial(GameObject prefab)
+        {
+            var r = prefab != null ? prefab.GetComponent<MeshRenderer>() : null;
+            return r != null ? r.sharedMaterial : null;
+        }
 
         void UniformScale(PickupType type, Transform view)
         {
@@ -151,11 +173,11 @@ namespace RoguePirates.V4.Presentation.Effects
             return type switch
             {
                 PickupType.FlyingHealth => _flyingHealth,
-                PickupType.GoldBarrel => _s.goldBarrelPickupPrefab != null ? _s.goldBarrelPickupPrefab : _s.goldPickupPrefab,
-                PickupType.XpBarrel => _s.xpBarrelPickupPrefab != null ? _s.xpBarrelPickupPrefab : _s.infamyPickupPrefab,
-                PickupType.Gold or PickupType.FlyingGold => _s.goldPickupPrefab,
+                PickupType.GoldBarrel => _goldBarrel,
+                PickupType.XpBarrel => _xpBarrel,
+                PickupType.Gold or PickupType.FlyingGold => _coin,
                 PickupType.FlyingXp or PickupType.Infamy => _gem,
-                PickupType.Powerup => _s.healthPickupPrefab,
+                PickupType.Powerup => _healthBarrel,
                 _ => _s.infamyPickupPrefab
             };
         }
@@ -224,7 +246,7 @@ namespace RoguePirates.V4.Presentation.Effects
         /// also showing gold coins, please remove those"): V3's EnsureFlyingLootSparkle gave the gem the gold coin's
         /// CollectSparkle (its particles use the CoinParticles material), so every XP gem burst gold coins; the gem now keeps
         /// only its own particles, if it has any.</summary>
-        GameObject GemTemplate(GameObject source)
+        public static GameObject GemTemplate(GameObject source)
         {
             var template = Object.Instantiate(source);
             template.SetActive(false);
@@ -233,7 +255,7 @@ namespace RoguePirates.V4.Presentation.Effects
             return template;
         }
 
-        static GameObject FlyingHealthTemplate()
+        public static GameObject FlyingHealthTemplate()
         {
             var go = new GameObject("FlyingHealthPlus");
             go.SetActive(false);

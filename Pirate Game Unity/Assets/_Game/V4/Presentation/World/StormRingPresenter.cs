@@ -40,19 +40,39 @@ namespace RoguePirates.V4.Presentation.World
 
         LineRenderer CreateRing()
         {
+            // V5 (visual prefabs): World/storm_ring/storm_ring_Ring (its colour, width and material are the prefab's; the
+            // code sets only the four corners), else code-built as before.
+            var prefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.StormRing, RoguePirates.V4.Presentation.Visuals.Visual.Ring);
+            if (prefab != null && prefab.GetComponent<LineRenderer>() != null)
+            {
+                var go = Instantiate(prefab, transform, false);
+                go.name = "StormSafeRing";
+                var own = go.GetComponent<LineRenderer>();
+                own.useWorldSpace = true;
+                own.loop = true;
+                own.positionCount = 4;
+                return own;
+            }
             var child = new GameObject("StormSafeRing");
             child.transform.SetParent(transform, false);
             var line = child.AddComponent<LineRenderer>();
+            ConfigureLine(line);
+            _material = new Material(Shader.Find("Sprites/Default"));
+            line.material = _material;
+            return line;
+        }
+
+        /// <summary>The ring line's settings as the code makes it (the visual prefab builder saves it, with a Sprites/Default
+        /// material asset, as World/storm_ring/storm_ring_Ring.prefab).</summary>
+        public static void ConfigureLine(LineRenderer line)
+        {
             line.useWorldSpace = true;
             line.loop = true;
             line.positionCount = 4;
             line.widthMultiplier = 0.5f;
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _material = new Material(Shader.Find("Sprites/Default"));
-            line.material = _material;
             line.startColor = RingColor;
             line.endColor = RingColor;
-            return line;
         }
 
         void OnDestroy()

@@ -207,11 +207,17 @@ namespace RoguePirates.V4.Tests
             pickups.Spawn(PickupType.Powerup, 10, at + Vector3.left * 3f); // the health barrel
             yield return null;
             yield return new WaitForSeconds(0.5f);
+            // V5 (visual prefabs): the barrels are the visual catalog's prefabs (gold_barrel_Model...) when it has them.
+            string Name(PickupType type, string old) =>
+                RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.Pickup(type), RoguePirates.V4.Presentation.Visuals.Visual.Model)?.name ?? old;
+            var gold = Name(PickupType.GoldBarrel, "LootBarrel");
+            var health = Name(PickupType.Powerup, "HealthBarrel");
+            var xp = Name(PickupType.XpBarrel, "GemBarrel");
             var barrels = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
-                .Where(t => t.gameObject.activeInHierarchy && t.name.StartsWith(PickupPresenter.KeyPrefix) && t.name.Contains("Barrel")).ToList();
+                .Where(t => t.gameObject.activeInHierarchy && t.name.StartsWith(PickupPresenter.KeyPrefix) && (t.name.Contains(gold) || t.name.Contains(health) || t.name.Contains(xp))).ToList();
             Debug.Log("[V5 D21 barrels] " + string.Join(", ", barrels.Select(b => $"{b.name}: {PickupPresenter.ActiveParticleSystems(b)} particle systems")));
-            Assert.IsTrue(barrels.Any(b => b.name.Contains("LootBarrel")), "a gold barrel is on the water");
-            Assert.IsTrue(barrels.Any(b => b.name.Contains("HealthBarrel")), "a health barrel is on the water");
+            Assert.IsTrue(barrels.Any(b => b.name.Contains(gold)), "a gold barrel is on the water");
+            Assert.IsTrue(barrels.Any(b => b.name.Contains(health)), "a health barrel is on the water");
             foreach (var b in barrels) Assert.AreEqual(0, PickupPresenter.ActiveParticleSystems(b), b.name + " has no sparkles");
         }
     }

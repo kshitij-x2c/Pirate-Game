@@ -24,9 +24,15 @@ namespace RoguePirates.V4.Tests
     {
         readonly List<Object> _created = new List<Object>();
 
+        // V5: these tests check the code-built views and the juice settings' shared effects, so no visual catalog (its
+        // prefabs would win).
+        [SetUp]
+        public void NoVisualCatalog() => RoguePirates.V4.Presentation.Visuals.VisualPick.Catalog = null;
+
         [TearDown]
         public void TearDown()
         {
+            RoguePirates.V4.Presentation.Visuals.VisualPick.ResetCatalog();
             foreach (var o in _created) if (o != null) Object.DestroyImmediate(o);
             _created.Clear();
         }

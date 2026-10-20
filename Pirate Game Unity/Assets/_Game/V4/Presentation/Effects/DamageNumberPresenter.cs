@@ -41,21 +41,37 @@ namespace RoguePirates.V4.Presentation.Effects
             _pools = pools;
             _shipPosition = shipPosition;
             if (_pools == null || _pools.Has(PoolKey)) return;
-            _template = new GameObject("DamageNumberTemplate");
-            _template.SetActive(false);
-            _template.transform.SetParent(transform, false);
-            var text = _template.AddComponent<TextMesh>();
+            // V5 (visual prefabs): Effects/damage_number/damage_number_Number (its TextMesh font and material, and a
+            // VisualTuning for the size, rise and seconds), else the code-built template as before.
+            _prefab = RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.DamageNumber, RoguePirates.V4.Presentation.Visuals.Visual.Number);
+            if (_prefab == null)
+            {
+                _template = BuildTemplate();
+                _template.transform.SetParent(transform, false);
+            }
+            _pools.Register(new PoolDefinition(PoolKey, _prefab != null ? _prefab : _template, prewarm, 0, ConfigEnums.PoolOverflowPolicy.Grow, "damage numbers"));
+            _pools.Prewarm(PoolKey);
+        }
+
+        GameObject _prefab;
+
+        /// <summary>The code-built number: a TextMesh in the built-in font, centred, drawn over the world (sorting 250). The
+        /// visual prefab builder saves it as Effects/damage_number/damage_number_Number.prefab.</summary>
+        public static GameObject BuildTemplate()
+        {
+            var template = new GameObject("DamageNumberTemplate");
+            template.SetActive(false);
+            var text = template.AddComponent<TextMesh>();
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (font != null)
             {
                 text.font = font;
-                var mesh = _template.GetComponent<MeshRenderer>();
+                var mesh = template.GetComponent<MeshRenderer>();
                 if (mesh != null) { mesh.sharedMaterial = font.material; mesh.sortingOrder = 250; }
             }
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
-            _pools.Register(new PoolDefinition(PoolKey, _template, prewarm, 0, ConfigEnums.PoolOverflowPolicy.Grow, "damage numbers"));
-            _pools.Prewarm(PoolKey);
+            return template;
         }
 
         /// <summary>Shows an enemy hit's number; false when none showed (no damage, or over the per-frame cap).</summary>
@@ -92,18 +108,19 @@ namespace RoguePirates.V4.Presentation.Effects
         {
             var crit = style == Style.Crit;
             var onPlayer = style == Style.Player;
+            position.y += RoguePirates.V4.Presentation.Visuals.VisualTuning.Height(_prefab);
             var go = _pools != null ? _pools.Acquire(PoolKey, position, Quaternion.identity) : null;
             if (go == null) return;
             var text = go.GetComponent<TextMesh>();
             text.text = Mathf.Max(1, Mathf.RoundToInt(damage)).ToString();
             var grouped = style == Style.Grouped;
             text.fontSize = crit ? 72 : onPlayer ? 64 : grouped ? 54 : 60;
-            text.characterSize = crit ? 0.26f : onPlayer ? 0.24f : grouped ? 0.19f : 0.22f;
+            text.characterSize = (crit ? 0.26f : onPlayer ? 0.24f : grouped ? 0.19f : 0.22f) * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(_prefab);
             text.fontStyle = crit || grouped ? FontStyle.Bold : FontStyle.Normal;
             text.color = onPlayer ? new Color(1f, 0.35f, 0.3f, 1f) : crit ? new Color(1f, 0.88f, 0.25f, 1f)
                 : grouped ? new Color(1f, 0.62f, 0.22f, 1f) : new Color(1f, 0.97f, 0.92f, 1f);
             FaceCamera(go.transform);
-            var lifetime = onPlayer ? PlayerLifetime : EnemyLifetime;
+            var lifetime = (onPlayer ? PlayerLifetime : EnemyLifetime) * RoguePirates.V4.Presentation.Visuals.VisualTuning.Lifetime(_prefab);
             _floaters.Add(new Floater
             {
                 Go = go, Text = text, Life = lifetime, MaxLife = lifetime,

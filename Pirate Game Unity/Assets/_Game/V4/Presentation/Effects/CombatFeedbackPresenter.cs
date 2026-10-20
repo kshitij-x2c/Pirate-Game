@@ -5,6 +5,9 @@ using RoguePirates.V4.Config;
 using RoguePirates.V4.Events;
 using RoguePirates.V4.Presentation.Pooling;
 using UnityEngine;
+using Ids = RoguePirates.V4.Presentation.Visuals.VisualIds;
+using V = RoguePirates.V4.Presentation.Visuals.Visual;
+using Tune = RoguePirates.V4.Presentation.Visuals.VisualTuning;
 
 namespace RoguePirates.V4.Presentation.Effects
 {
@@ -70,6 +73,28 @@ namespace RoguePirates.V4.Presentation.Effects
         GameObject PickHit(string weaponId, Weapons.WeaponVisualSlot slot, GameObject fallback) =>
             Visuals != null && weaponId != null ? Visuals.Pick(weaponId, slot, fallback) : fallback;
 
+        // V5 (visual prefabs): the shared effects from the visual catalog (Effects/hit, kill, damage_highlight; the ship's
+        // highlight and level-up burst; the boss arrival), each falling back to the juice settings' prefab as before.
+        GameObject _hit, _crit, _cannon, _kill, _eliteKill, _bossKill, _highlight, _shipHighlight, _levelUp, _arrival;
+
+        static GameObject Shared(string id, string visual, GameObject fallback) => RoguePirates.V4.Presentation.Visuals.VisualPick.Pick(id, visual, fallback);
+        static GameObject Own(string id, string visual) => id != null ? RoguePirates.V4.Presentation.Visuals.VisualPick.Get(id, visual) : null;
+
+        void ResolveShared()
+        {
+            var s = _s;
+            _hit = Shared(Ids.HitSpark, V.Hit, s.enemyHitPrefab);
+            _crit = Shared(Ids.HitSpark, V.CritHit, s.critHitPrefab);
+            _cannon = Shared(Ids.HitSpark, V.CannonImpact, s.cannonImpactPrefab != null ? s.cannonImpactPrefab : s.weaponExplosionPrefab);
+            _kill = Shared(Ids.Kill, V.Death, s.enemyKillPrefab);
+            _eliteKill = Shared(Ids.Kill, V.EliteDeath, s.eliteKillExplosionPrefab);
+            _bossKill = Shared(Ids.Kill, V.BossDeath, s.bossKillExplosionPrefab != null ? s.bossKillExplosionPrefab : s.enemyKillPrefab);
+            _highlight = Shared(Ids.DamageHighlight, V.Highlight, s.damageHighlightPrefab);
+            _shipHighlight = Shared(Ids.PlayerShip, V.Highlight, _highlight);
+            _levelUp = Shared(Ids.PlayerShip, V.LevelUp, s.levelUpBurstPrefab);
+            _arrival = Shared(Ids.Boss, V.Arrival, s.bossArrivalPrefab);
+        }
+
         public void Bind(PoolService pools, ICombatEventReader events, ConfigSetRuntime config, DemoJuiceSettings settings, Func<Transform> ship,
             CameraShakePresenter shake, DamageNumberPresenter numbers)
         {
@@ -82,17 +107,26 @@ namespace RoguePirates.V4.Presentation.Effects
             _fx = new PooledEffects(pools);
             if (_s != null)
             {
+                ResolveShared();
                 // Prewarm for peak load (M14.15: six weapons and ~70 enemies peaked at 33 hit sparks, 11 highlights).
-                _fx.Register(_s.enemyHitPrefab, 40);
+                _fx.Register(_hit, 40);
                 // Hackathon (13 Oct): with the weapon prefab catalog the weapons' crits and cannon impacts are their own copies
                 // (prewarmed below); the shared ones stay for hits without a weapon prefab (items).
-                _fx.Register(_s.critHitPrefab, Visuals != null ? 4 : 12);
-                _fx.Register(_s.cannonImpactPrefab != null ? _s.cannonImpactPrefab : _s.weaponExplosionPrefab, Visuals != null ? 2 : 24);
-                _fx.Register(_s.enemyKillPrefab, 16);
-                _fx.Register(_s.eliteKillExplosionPrefab, 4);
-                _fx.Register(_s.bossKillExplosionPrefab, Mathf.Max(1, _s.bossDeathBurstCount));
-                _fx.Register(_s.damageHighlightPrefab, 16);
-                _fx.Register(_s.levelUpBurstPrefab, 2);
+                _fx.Register(_crit, Visuals != null ? 4 : 12);
+                _fx.Register(_cannon, Visuals != null ? 2 : 24);
+                _fx.Register(_kill, 16);
+                _fx.Register(_eliteKill, 4);
+                _fx.Register(_bossKill, Mathf.Max(1, _s.bossDeathBurstCount));
+                _fx.Register(_highlight, 16);
+                _fx.Register(_shipHighlight, 2);
+                _fx.Register(_levelUp, 2);
+                // V5 (visual prefabs): an enemy's own death or highlight prefab, when the owner gave it one.
+                var catalog = RoguePirates.V4.Presentation.Visuals.VisualPick.Catalog;
+                if (catalog != null)
+                {
+                    foreach (var (_, prefab) in catalog.All(V.Death)) _fx.Register(prefab, 4);
+                    foreach (var (_, prefab) in catalog.All(V.Highlight)) _fx.Register(prefab, 4);
+                }
                 // Hackathon (13 Oct): each weapon's own hit and crit sparks (a run has at most six weapons; they grow past this).
                 if (Visuals != null && config != null)
                     foreach (var w in config.All<WeaponConfig>())
@@ -136,8 +170,9 @@ namespace RoguePirates.V4.Presentation.Effects
                         break;
                     case CombatEventKind.Killed:
                         // A profile may replace the kill effect, but a boss keeps its multi-burst.
+                        var killedEnemy = Profiles != null ? Profiles.EnemyOfUnit(e.A) : null; // V5: its own death prefab, if any
                         if (Profiles != null && Profiles.Killed(e.A, e.Tag, new Vector3(e.X, 0.25f, e.Y)) && (e.B & 2) == 0) break;
-                        OnKill(new Vector3(e.X, 0f, e.Y), (e.B & 1) != 0 && (e.B & 4) == 0, (e.B & 2) != 0, e.Tag);
+                        OnKill(new Vector3(e.X, 0f, e.Y), (e.B & 1) != 0 && (e.B & 4) == 0, (e.B & 2) != 0, e.Tag, killedEnemy);
                         break;
                     case CombatEventKind.Spawned: Profiles?.Spawned(e.A, e.Tag, new Vector3(e.X, 0f, e.Y)); break;
                     case CombatEventKind.BossArriving: OnBossArriving(new Vector3(e.X, 0f, e.Y)); break;
@@ -202,7 +237,7 @@ namespace RoguePirates.V4.Presentation.Effects
                 _numbers?.ShowGroupedDamage(g.Position, g.Damage);
                 var view = NearestEnemyView?.Invoke(g.Position, GroupRadius);
                 if (view != null) DamageHighlight(view);
-                else if (_s != null && _s.enemyHitPrefab != null) Play(_s.enemyHitPrefab, g.Position + Vector3.up * 0.35f, _s.enemyHitScale * 0.75f);
+                else if (_s != null && _hit != null) PlayVisual(_hit, g.Position + Vector3.up * 0.35f, _s.enemyHitScale * 0.75f);
             }
         }
 
@@ -211,20 +246,31 @@ namespace RoguePirates.V4.Presentation.Effects
             if (_fx.Play(prefab, position, Quaternion.identity, scale, lifetime) != null) EffectsPlayed++;
         }
 
+        /// <summary>V5 (visual prefabs): a shared or enemy prefab with its VisualTuning (scale, seconds, height; the code's without one).</summary>
+        void PlayVisual(GameObject prefab, Vector3 position, float scale, float lifetime = 0f)
+        {
+            position.y += Tune.Height(prefab);
+            var t = Tune.Lifetime(prefab);
+            if (!Mathf.Approximately(t, 1f)) lifetime = (lifetime > 0f ? lifetime : PooledEffects.EstimateLifetime(prefab)) * t;
+            Play(prefab, position, scale * Tune.Scale(prefab), lifetime);
+        }
+
         /// <summary>A weapon hit prefab with its tuning (scale, lifetime, height; 1 and 0 without one).</summary>
         void PlayTuned(GameObject prefab, Vector3 position, float scale, float lifetime = 0f)
         {
             position.y += Weapons.WeaponVisualTuning.Height(prefab);
             if (lifetime > 0f) lifetime *= Weapons.WeaponVisualTuning.Lifetime(prefab);
-            Play(prefab, position, scale * Weapons.WeaponVisualTuning.Scale(prefab), lifetime);
+            // V5: a shared hit prefab (Effects/hit) carries a VisualTuning instead; both are 1 without one.
+            PlayVisual(prefab, position, scale * Weapons.WeaponVisualTuning.Scale(prefab), lifetime);
         }
 
         /// <summary>Demo: the whirlpool where the boss is about to rise (it swirls until just after the boss appears).</summary>
         void OnBossArriving(Vector3 position)
         {
-            if (_s == null || _s.bossArrivalPrefab == null || Profiles == null) return;
-            var slot = new VfxSlot { prefab = _s.bossArrivalPrefab, scale = _s.bossArrivalScale, lifetime = _s.bossArrivalSeconds + 2.5f, replaceDefault = false };
-            Profiles.Play(slot, position, Quaternion.identity);
+            if (_s == null || _arrival == null || Profiles == null) return;
+            // V5 (visual prefabs): Bosses/boss/boss_Arrival (its tuning: scale, seconds, height).
+            var slot = new VfxSlot { prefab = _arrival, scale = _s.bossArrivalScale * Tune.Scale(_arrival), lifetime = (_s.bossArrivalSeconds + 2.5f) * Tune.Lifetime(_arrival), replaceDefault = false };
+            Profiles.Play(slot, position + Vector3.up * Tune.Height(_arrival), Quaternion.identity);
             _shake?.Shake(0.1f, _s.bossArrivalSeconds);
         }
 
@@ -244,42 +290,44 @@ namespace RoguePirates.V4.Presentation.Effects
             // Hackathon (13 Oct): the weapon's own hit and crit prefabs (WeaponVisualCatalog); their tuning scales them.
             if (effect == ConfigEnums.WeaponHitEffect.None)
             {
-                var spark = PickHit(weaponId, Weapons.WeaponVisualSlot.Hit, _s.enemyHitPrefab);
+                var spark = PickHit(weaponId, Weapons.WeaponVisualSlot.Hit, _hit);
                 if (spark != null) PlayTuned(spark, position + Vector3.up * 0.35f, _s.enemyHitScale * 0.8f);
                 return;
             }
             var mult = profile != null && !profile.HasPrefab ? profile.ScaleOrOne : 1f;
             if (effect == ConfigEnums.WeaponHitEffect.CannonImpact)
             {
-                var prefab = PickHit(weaponId, Weapons.WeaponVisualSlot.Hit, _s.cannonImpactPrefab != null ? _s.cannonImpactPrefab : _s.weaponExplosionPrefab);
+                var prefab = PickHit(weaponId, Weapons.WeaponVisualSlot.Hit, _cannon);
                 if (prefab != null) { PlayTuned(prefab, position + Vector3.up * 0.45f, _s.cannonImpactScale * (crit ? 1.12f : 1f) * mult, 0.55f); return; }
             }
-            var hit = crit && _s.critHitPrefab != null ? PickHit(weaponId, Weapons.WeaponVisualSlot.CritHit, _s.critHitPrefab) : PickHit(weaponId, Weapons.WeaponVisualSlot.Hit, _s.enemyHitPrefab);
+            var hit = crit && _crit != null ? PickHit(weaponId, Weapons.WeaponVisualSlot.CritHit, _crit) : PickHit(weaponId, Weapons.WeaponVisualSlot.Hit, _hit);
             PlayTuned(hit, position + Vector3.up * 0.35f, (crit ? _s.critHitScale : _s.enemyHitScale) * mult);
         }
 
         /// <summary>V3 CombatVfxController.OnKill → JuiceVfxBroker.PlayKill.</summary>
-        void OnKill(Vector3 position, bool elite, bool boss, string weaponId)
+        void OnKill(Vector3 position, bool elite, bool boss, string weaponId, string enemyId = null)
         {
             // Playtest (3 Oct, owner: "some enemies don't play the death explosion"): every kill explodes; a weapon's
             // "no hit effect" (Powder Kegs, which have their own blast) only silences its hit sparks, not the kill.
             if (_s == null) return;
+            // V5 (visual prefabs): the enemy's own death prefab (an owner's addition), else the shared kill for its tier.
+            var own = Own(enemyId, V.Death);
             if (boss)
             {
-                var prefab = _s.bossKillExplosionPrefab != null ? _s.bossKillExplosionPrefab : _s.enemyKillPrefab;
+                var prefab = own != null ? own : _bossKill;
                 var count = Mathf.Max(1, _s.bossDeathBurstCount);
                 for (var i = 0; i < count; i++)
                 {
                     var offset = UnityEngine.Random.insideUnitSphere * 1.5f;
                     offset.y = Mathf.Abs(offset.y) * 0.5f;
-                    Play(prefab, position + offset, _s.bossKillExplosionScale * (0.85f + i * 0.15f));
+                    PlayVisual(prefab, position + offset, _s.bossKillExplosionScale * (0.85f + i * 0.15f));
                 }
                 return;
             }
-            var explosion = elite && _s.eliteKillExplosionPrefab != null ? _s.eliteKillExplosionPrefab : _s.enemyKillPrefab;
+            var explosion = own != null ? own : elite && _eliteKill != null ? _eliteKill : _kill;
             if (explosion == null) return;
             var mult = Profiles != null ? Profiles.KillScale(weaponId) : 1f;
-            Play(explosion, position + Vector3.up * 0.25f, (elite ? _s.eliteKillExplosionScale : _s.enemyKillScale) * mult);
+            PlayVisual(explosion, position + Vector3.up * 0.25f, (elite ? _s.eliteKillExplosionScale : _s.enemyKillScale) * mult);
         }
 
         /// <summary>V3 CombatVfxController.OnDamageTaken: the ship flashes and gets a highlight; the number rises above it.</summary>
@@ -297,8 +345,8 @@ namespace RoguePirates.V4.Presentation.Effects
         void OnLevelUp()
         {
             var ship = _ship?.Invoke();
-            if (_s == null || _s.levelUpBurstPrefab == null || ship == null) return;
-            Play(_s.levelUpBurstPrefab, ship.position + Vector3.up * 0.5f, _s.levelUpBurstScale > 0f ? _s.levelUpBurstScale : 1f);
+            if (_s == null || _levelUp == null || ship == null) return;
+            PlayVisual(_levelUp, ship.position + Vector3.up * 0.5f, _s.levelUpBurstScale > 0f ? _s.levelUpBurstScale : 1f);
             _shake?.Shake(0.12f, 0.25f);
         }
 
@@ -306,10 +354,14 @@ namespace RoguePirates.V4.Presentation.Effects
         public void DamageHighlight(Transform view)
         {
             Profiles?.EnemyHit(view);
-            if (_s == null || _s.damageHighlightPrefab == null || view == null) return;
-            var go = _fx.Play(_s.damageHighlightPrefab, view.position, Quaternion.identity, _s.damageHighlightScale, _s.damageHighlightDuration, view);
+            if (_s == null || view == null) return;
+            // V5 (visual prefabs): the enemy's own highlight (an owner's addition), the ship's, else the shared one.
+            var prefab = Own(Profiles != null ? Profiles.EnemyOfView(view) : null, V.Highlight);
+            if (prefab == null) prefab = _ship != null && view == _ship() ? _shipHighlight : _highlight;
+            if (prefab == null) return;
+            var go = _fx.Play(prefab, view.position, Quaternion.identity, _s.damageHighlightScale * Tune.Scale(prefab), _s.damageHighlightDuration * Tune.Lifetime(prefab), view);
             if (go == null) return;
-            go.transform.localPosition = Vector3.up * 0.5f;
+            go.transform.localPosition = Vector3.up * (0.5f + Tune.Height(prefab));
             go.transform.localRotation = Quaternion.identity;
             EffectsPlayed++;
         }

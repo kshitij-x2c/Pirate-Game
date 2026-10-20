@@ -166,12 +166,14 @@ namespace RoguePirates.V4.Foundation.World
             var rend = go.GetComponent<Renderer>();
             if (rend != null)
             {
-                rend.material = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard"));
-                rend.material.color = color;
+                // One new material in the colour (set before it goes on, so the Editor's prefab builder makes no extra copy).
+                rend.sharedMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard")) { color = color };
             }
 
             var col = go.GetComponent<Collider>();
-            if (col != null) Object.Destroy(col);
+            // V5 (visual prefabs): only in play. The Editor's visual prefab builder keeps it, as the pooled copies of a
+            // powerup do (the pool copies the template in the same frame, before this Destroy lands).
+            if (col != null && Application.isPlaying) Object.Destroy(col);
 
             var marker = go.AddComponent<PlaceholderMarker>();
             marker.Configure(category, id, hint);

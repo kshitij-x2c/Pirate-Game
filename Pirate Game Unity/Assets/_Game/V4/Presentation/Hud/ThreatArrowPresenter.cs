@@ -91,8 +91,9 @@ namespace RoguePirates.V4.Presentation.Hud
                 Separate(_points, box, GapSide, GapTopBottom);
             }
 
-            _pulse += Time.unscaledDeltaTime * 6f;
-            var s = 1f + Mathf.Sin(_pulse) * 0.08f;
+            var prefab = Prefab; // V5: its tuning sets the pulse
+            _pulse += Time.unscaledDeltaTime * 6f * RoguePirates.V4.Presentation.Visuals.VisualTuning.PulseSpeed(prefab);
+            var s = (1f + Mathf.Sin(_pulse) * 0.08f * RoguePirates.V4.Presentation.Visuals.VisualTuning.Pulse(prefab)) * RoguePirates.V4.Presentation.Visuals.VisualTuning.Scale(prefab);
             var ship = _views?.Ship;
             for (var i = 0; i < _off.Count; i++)
             {
@@ -230,38 +231,64 @@ namespace RoguePirates.V4.Presentation.Hud
             return new Vector2(box.xMin, box.yMax - Mathf.Min(s, h));
         }
 
+        // V5 (visual prefabs): World/threat_arrow/threat_arrow_Arrow (its "Triangle" image and "Label" text), else code-built.
+        static GameObject Prefab => RoguePirates.V4.Presentation.Visuals.VisualPick.Get(RoguePirates.V4.Presentation.Visuals.VisualIds.ThreatArrow, RoguePirates.V4.Presentation.Visuals.Visual.Arrow);
+
         static Arrow NewArrow(RectTransform parent)
         {
-            var a = new Arrow();
-            a.root = (RectTransform)new GameObject("Arrow", typeof(RectTransform)).transform;
-            a.root.SetParent(parent, false);
-            a.root.anchorMin = a.root.anchorMax = new Vector2(0.5f, 0.5f);
-            a.root.sizeDelta = Vector2.zero;
+            var prefab = Prefab;
+            RectTransform root;
+            if (prefab != null)
+            {
+                root = (RectTransform)Instantiate(prefab, parent, false).transform;
+                root.name = "Arrow";
+            }
+            else
+            {
+                root = BuildArrow(MinimapUiSprites.Triangle);
+                root.SetParent(parent, false);
+            }
+            var a = new Arrow { root = root };
+            a.triangle = (RectTransform)root.Find("Triangle");
+            a.image = a.triangle.GetComponent<Image>();
+            a.label = (RectTransform)root.Find("Label");
+            a.text = a.label.GetComponent<TextMeshProUGUI>();
+            return a;
+        }
 
-            a.triangle = (RectTransform)new GameObject("Triangle", typeof(RectTransform)).transform;
-            a.triangle.SetParent(a.root, false);
-            a.triangle.sizeDelta = new Vector2(52f, 52f);
-            a.image = a.triangle.gameObject.AddComponent<Image>();
-            a.image.sprite = MinimapUiSprites.Triangle; // points down; rotated towards the threat
-            a.image.raycastTarget = false;
-            var outline = a.triangle.gameObject.AddComponent<Outline>();
+        /// <summary>One arrow as the code builds it: a root at the centre, a "Triangle" image (the sprite points down; the code
+        /// turns it towards the threat) with a dark outline, and a bold outlined "Label". The visual prefab builder saves it
+        /// as World/threat_arrow/threat_arrow_Arrow.prefab.</summary>
+        public static RectTransform BuildArrow(Sprite triangleSprite)
+        {
+            var root = (RectTransform)new GameObject("Arrow", typeof(RectTransform)).transform;
+            root.anchorMin = root.anchorMax = new Vector2(0.5f, 0.5f);
+            root.sizeDelta = Vector2.zero;
+
+            var triangle = (RectTransform)new GameObject("Triangle", typeof(RectTransform)).transform;
+            triangle.SetParent(root, false);
+            triangle.sizeDelta = new Vector2(52f, 52f);
+            var image = triangle.gameObject.AddComponent<Image>();
+            image.sprite = triangleSprite; // points down; rotated towards the threat
+            image.raycastTarget = false;
+            var outline = triangle.gameObject.AddComponent<Outline>();
             outline.effectColor = new Color(0f, 0f, 0f, 0.8f);
             outline.effectDistance = new Vector2(2f, -2f);
 
-            a.label = (RectTransform)new GameObject("Label", typeof(RectTransform)).transform;
-            a.label.SetParent(a.root, false);
-            a.label.anchorMin = a.label.anchorMax = new Vector2(0.5f, 0.5f);
-            a.label.sizeDelta = new Vector2(180f, 50f);
-            a.text = a.label.gameObject.AddComponent<TextMeshProUGUI>();
-            a.text.fontSize = 20f;
-            a.text.fontStyle = FontStyles.Bold;
-            a.text.alignment = TextAlignmentOptions.Center;
-            a.text.enableWordWrapping = false;
-            a.text.color = Color.white;
-            a.text.outlineWidth = 0.25f;
-            a.text.outlineColor = new Color32(0, 0, 0, 255);
-            a.text.raycastTarget = false;
-            return a;
+            var label = (RectTransform)new GameObject("Label", typeof(RectTransform)).transform;
+            label.SetParent(root, false);
+            label.anchorMin = label.anchorMax = new Vector2(0.5f, 0.5f);
+            label.sizeDelta = new Vector2(180f, 50f);
+            var text = label.gameObject.AddComponent<TextMeshProUGUI>();
+            text.fontSize = 20f;
+            text.fontStyle = FontStyles.Bold;
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableWordWrapping = false;
+            text.color = Color.white;
+            text.outlineWidth = 0.25f;
+            text.outlineColor = new Color32(0, 0, 0, 255);
+            text.raycastTarget = false;
+            return root;
         }
     }
 }
