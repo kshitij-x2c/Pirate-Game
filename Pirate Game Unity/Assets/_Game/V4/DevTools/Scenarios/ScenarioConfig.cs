@@ -46,7 +46,7 @@ namespace RoguePirates.V4.DevTools.Scenarios
         public ScenarioLoadout loadout = new ScenarioLoadout();
 
         [Header("Around the ship")]
-        [Tooltip("Where the ship starts: where the stage put it, or driven into the nearest island shore at 12 m/s.")]
+        [Tooltip("Where the ship starts: where the stage put it, driven into the nearest island shore at 12 m/s, or in open water 8 m inside the play area's east edge (the storm edge and ring; V5 visual prefabs).")]
         public ShipStart shipStart = ShipStart.AsTheStage;
         [Tooltip("With IntoShore: keep driving into the shore for the whole scenario (a stick held into it).")]
         public bool holdIntoShore;
@@ -56,6 +56,10 @@ namespace RoguePirates.V4.DevTools.Scenarios
         public BossSummon boss = BossSummon.None;
         [Tooltip("Every enemy that is not the scenario's own (ambient, scripted) is sunk the moment it appears, through the weapon hit path: a player who kills everything at once (kills count for the kill band).")]
         public bool sinkOtherEnemies;
+        [Tooltip("V5 (visual prefabs): pickups dropped around the ship at the start (XP gems, coins, barrels), as an enemy's drop would.")]
+        public List<ScenarioPickup> pickups = new List<ScenarioPickup>();
+        [Tooltip("V5 (visual prefabs): floor powerups placed around the ship at the start (no drop roll; they last their usual time).")]
+        public List<ScenarioPowerup> powerups = new List<ScenarioPowerup>();
 
         [Header("Config edits (this run only, as the console's Config section)")]
         public List<ScenarioConfigEdit> configEdits = new List<ScenarioConfigEdit>();
@@ -65,7 +69,7 @@ namespace RoguePirates.V4.DevTools.Scenarios
 
         public enum PlaytestSwitches { Off, Shipped }
         public enum ScriptedPhaseMode { AsTheGame, SkipPassed, SkipAll }
-        public enum ShipStart { AsTheStage, IntoShore }
+        public enum ShipStart { AsTheStage, IntoShore, NearEdge }
         public enum BossSummon { None, Summon, AtBeacon }
     }
 
@@ -125,6 +129,31 @@ namespace RoguePirates.V4.DevTools.Scenarios
     {
         public POIType type;
         [Tooltip("Metres from the ship.")]
+        public float distance = 12f;
+        [Tooltip("Degrees clockwise from the top of the screen.")]
+        public float bearing;
+    }
+
+    [Serializable]
+    public sealed class ScenarioPickup
+    {
+        public PickupType type = PickupType.Infamy;
+        [Tooltip("Its value (XP, gold, or the health a health barrel gives).")]
+        public int value = 1;
+        public int count = 1;
+        [Tooltip("Metres from the ship (past the pickup radius, or it flies to the ship at once).")]
+        public float distance = 10f;
+        [Tooltip("Degrees clockwise from the top of the screen.")]
+        public float bearing;
+        [Tooltip("Degrees between pickups of a group.")]
+        public float spread = 10f;
+    }
+
+    [Serializable]
+    public sealed class ScenarioPowerup
+    {
+        public PowerupKind kind;
+        [Tooltip("Metres from the ship (past the powerup magnet radius, or it flies to the ship at once).")]
         public float distance = 12f;
         [Tooltip("Degrees clockwise from the top of the screen.")]
         public float bearing;

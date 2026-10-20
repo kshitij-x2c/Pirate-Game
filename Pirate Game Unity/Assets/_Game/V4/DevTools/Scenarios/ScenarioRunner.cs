@@ -81,6 +81,7 @@ namespace RoguePirates.V4.DevTools.Scenarios
             ApplyShip(scenario);
             ApplyPois(scenario, game);
             ApplyEnemies(scenario, game);
+            ApplyLoot(scenario, game);
             ApplyBoss(scenario, game);
             context.TryGet<ISpawnController>(out var spawn);
             foreach (var id in scenario.triggerPhases)
@@ -165,12 +166,30 @@ namespace RoguePirates.V4.DevTools.Scenarios
 
         void ApplyShip(ScenarioConfig s)
         {
+            if (s.shipStart == ScenarioConfig.ShipStart.NearEdge) { PlaceNearEdge(); return; }
             if (s.shipStart != ScenarioConfig.ShipStart.IntoShore) return;
             if (!FindShore(Ship.transform.position, out var shore, out var normal)) { Errors.Add("no island shore to drive into"); return; }
             Shore = shore;
             ShoreNormal = normal;
             Ship.PlaceForTest(shore + normal * (Ship.IslandCollisionRadius + 3f), -normal * 12f);
             _holdAt = Time.time + 0.3f;
+        }
+
+        /// <summary>V5 (visual prefabs): the ship in open water 8 m inside the play area's east edge (the storm edge warning
+        /// and the storm's safe ring are on screen there).</summary>
+        void PlaceNearEdge()
+        {
+            if (!PlayBounds.IsConfigured) { Errors.Add("no play bounds: the ship stays where the stage put it"); return; }
+            var c = PlayBounds.Center;
+            for (var step = 0; step < 40; step++)
+            {
+                var dz = (step % 2 == 0 ? 1f : -1f) * (step / 2) * 4f;
+                var p = new Vector3(c.x + PlayBounds.HalfExtentX - 8f, 0f, c.z + dz);
+                if (!PlayBounds.IsOpenWater(p, 6f)) continue;
+                Ship.SetWorldPosition(p);
+                return;
+            }
+            Errors.Add("no open water near the east edge");
         }
 
         void ApplyPois(ScenarioConfig s, V4Game game)
@@ -204,6 +223,21 @@ namespace RoguePirates.V4.DevTools.Scenarios
                     Spawned.Add((e.enemyId, unit));
                 }
             }
+        }
+
+        /// <summary>V5 (visual prefabs): pickups dropped and floor powerups placed around the ship (the pickup module's
+        /// spawn, as an enemy's drop; the powerup module's dev spawn, with no drop roll).</summary>
+        void ApplyLoot(ScenarioConfig s, V4Game game)
+        {
+            if ((s.pickups == null || s.pickups.Count == 0) && (s.powerups == null || s.powerups.Count == 0)) return;
+            if (game.IsPvp || game.Build == null) { Errors.Add("pickups and powerups: no build module (1v1)"); return; }
+            if (s.pickups != null)
+                foreach (var p in s.pickups)
+                    for (var i = 0; i < Mathf.Max(1, p.count); i++)
+                        game.Build.Pickups.Spawn(p.type, Mathf.Max(1, p.value), Around(p.distance, p.bearing + (i - (p.count - 1) * 0.5f) * p.spread));
+            if (s.powerups != null)
+                foreach (var p in s.powerups)
+                    if (!game.Build.Powerups.DevSpawn(p.kind, Around(p.distance, p.bearing))) Errors.Add($"powerup {p.kind}: no room to place it");
         }
 
         void ApplyBoss(ScenarioConfig s, V4Game game)

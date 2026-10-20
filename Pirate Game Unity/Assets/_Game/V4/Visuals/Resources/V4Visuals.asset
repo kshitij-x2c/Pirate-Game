@@ -1,0 +1,487 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed377790ba960cc47a11dc0a5b6d3523, type: 3}
+  m_Name: V4Visuals
+  m_EditorClassIdentifier: RoguePirates.V4.Presentation::RoguePirates.V4.Presentation.Visuals.VisualCatalog
+  entries:
+  - category: 0
+    id: boarding_barge
+    visual: Model
+    prefab: {fileID: 7916550590683555807, guid: 566bfebeb9fe4b84185ac11e55b1f54c, type: 3}
+  - category: 0
+    id: bomb_boat
+    visual: Model
+    prefab: {fileID: 2139993696676558577, guid: 723aa632838697640a1ea489621b6157, type: 3}
+  - category: 0
+    id: bomb_ketch
+    visual: Model
+    prefab: {fileID: 6282039350857139025, guid: f486cb76234b46b45b5057d22d155f98, type: 3}
+  - category: 0
+    id: cannonboat
+    visual: Model
+    prefab: {fileID: 7040817077708509195, guid: 47eddcfebae53b547ac05a80a25efd40, type: 3}
+  - category: 0
+    id: cutthroat_skiff
+    visual: Model
+    prefab: {fileID: 9036837326585693491, guid: 196ba33422c9c2a4b9814f93057b5a4d, type: 3}
+  - category: 0
+    id: deckhand_dinghy
+    visual: Model
+    prefab: {fileID: 2822556608512148171, guid: c2e8c5125f092e243840a0dd8905956b, type: 3}
+  - category: 0
+    id: drowned_harrier
+    visual: Model
+    prefab: {fileID: 7071181979564009114, guid: 64d56023baa97f2418b7a58169a7e411, type: 3}
+  - category: 0
+    id: drowned_pursuer
+    visual: Model
+    prefab: {fileID: 6738500363682127243, guid: e7e6cc810a4b57442957ae9230212cd8, type: 3}
+  - category: 0
+    id: elite_hammerhead
+    visual: Model
+    prefab: {fileID: 1124763297115316911, guid: 40563a9d211053e4ab8411c80a9c7bda, type: 3}
+  - category: 0
+    id: elite_kraken_spawn
+    visual: Model
+    prefab: {fileID: 636850794098053522, guid: 689a435967bd8474a855c76af13a5338, type: 3}
+  - category: 0
+    id: elite_kraken_spawn
+    visual: Spawn
+    prefab: {fileID: 903273094389623113, guid: 00d4ee0baa1cf9243b006cd5fbb47a69, type: 3}
+  - category: 0
+    id: enemy
+    visual: HealthBar
+    prefab: {fileID: 3145335683151901504, guid: d1a676be1474c4848b6ef376b56e2a6e, type: 3}
+  - category: 0
+    id: enemy
+    visual: Placeholder
+    prefab: {fileID: 6433100945806427929, guid: bb5179af7cd2e99479b73ac3364012e8, type: 3}
+  - category: 0
+    id: enemy
+    visual: Shot
+    prefab: {fileID: 2713296332021901377, guid: a6cf615234bdd0b4684de685fbc5bdeb, type: 3}
+  - category: 0
+    id: enemy
+    visual: TelegraphRing
+    prefab: {fileID: 5738620123495361501, guid: b7b6f0dc38d08b54cacacbce28f86a72, type: 3}
+  - category: 0
+    id: gunner_cog
+    visual: Model
+    prefab: {fileID: 1616686578783924500, guid: 4ddc0a4341b36c646bdd021edf0c31ff, type: 3}
+  - category: 0
+    id: hammerhead
+    visual: Model
+    prefab: {fileID: 4213303393926778914, guid: 2823c32a1f6654a4b99cb8ea5b8173ec, type: 3}
+  - category: 0
+    id: kraken_spawn
+    visual: Model
+    prefab: {fileID: 3010273012587059335, guid: b9b8f2cf3899649459405291ed4571bf, type: 3}
+  - category: 0
+    id: kraken_spawn
+    visual: Spawn
+    prefab: {fileID: 136689202689886562, guid: 1024d200caa093345b90ddeb8c69a755, type: 3}
+  - category: 0
+    id: manta_ray
+    visual: Model
+    prefab: {fileID: 4919788598953481429, guid: 3547721594e289b4ba3574158e922a81, type: 3}
+  - category: 0
+    id: needle_sloop
+    visual: Model
+    prefab: {fileID: 8612718581059802316, guid: e0cfc016d8960a74db67c272117d281c, type: 3}
+  - category: 0
+    id: net_cutter
+    visual: Model
+    prefab: {fileID: 809441280416291724, guid: c959514f531b47c4cae12a6d14e93c67, type: 3}
+  - category: 0
+    id: powder_barge
+    visual: Model
+    prefab: {fileID: 6500268297341119898, guid: 01061c81db876184096bb5632351f59f, type: 3}
+  - category: 0
+    id: ram_raider
+    visual: Model
+    prefab: {fileID: 3517520600991370507, guid: 39cc99376a1b63e40af0ff81bac15d25, type: 3}
+  - category: 0
+    id: rammer_raft
+    visual: Model
+    prefab: {fileID: 6182004566336582405, guid: 41b8078709a33424aad9afbcbfdc5028, type: 3}
+  - category: 0
+    id: repair_tender
+    visual: Model
+    prefab: {fileID: 8166148981548844619, guid: 9c481db412da8874a8698ca2222eb7d6, type: 3}
+  - category: 0
+    id: shark
+    visual: Model
+    prefab: {fileID: 1447964530027553623, guid: d83deea545bfacd41ac6a05c3cf776ea, type: 3}
+  - category: 0
+    id: shield_frigate
+    visual: Model
+    prefab: {fileID: 4704201698063328920, guid: 5e84541b8b990234fac3ed4abb94d0c6, type: 3}
+  - category: 0
+    id: swordfish
+    visual: Model
+    prefab: {fileID: 2697447112786219029, guid: ed3918c23b29825459850d66bb30963e, type: 3}
+  - category: 0
+    id: treasure_raider
+    visual: Model
+    prefab: {fileID: 402001184724560098, guid: 806481a00b0030240b73dbe1fcb7a6c4, type: 3}
+  - category: 1
+    id: barnacle_king
+    visual: DeathExtra
+    prefab: {fileID: 2328787440834292808, guid: 6823949d8e848824e9cb4600e942f8b6, type: 3}
+  - category: 1
+    id: barnacle_king
+    visual: Model
+    prefab: {fileID: 4764352309605711720, guid: 3a24c5078bcdcfe46bd1ca9c9e934a23, type: 3}
+  - category: 1
+    id: barnacle_king
+    visual: Spawn
+    prefab: {fileID: 5726910509586983425, guid: f168a778dfbe58d4bb4f92caaeb4e4be, type: 3}
+  - category: 1
+    id: boss
+    visual: Arrival
+    prefab: {fileID: 1146023631898812884, guid: 65340433459d56f4297582c2e2cc557f, type: 3}
+  - category: 1
+    id: boss
+    visual: MarkedTelegraph
+    prefab: {fileID: 505853950956872183, guid: 9b92bba38fa946f4fb61c5139b107b56, type: 3}
+  - category: 1
+    id: reef_crab_miniboss
+    visual: DeathExtra
+    prefab: {fileID: 5901871272566579378, guid: b332e8f65053abd4c8643cb786b2019d, type: 3}
+  - category: 1
+    id: reef_crab_miniboss
+    visual: Model
+    prefab: {fileID: 9008775128697439600, guid: 4ca7d3cbbec82ad458b7b710b9037cf7, type: 3}
+  - category: 1
+    id: reef_crab_miniboss
+    visual: Spawn
+    prefab: {fileID: 6862585495230474660, guid: b7fae6457ea104340b077ad22e5bd995, type: 3}
+  - category: 2
+    id: player_ship
+    visual: DeathExtra
+    prefab: {fileID: 2953957480265555159, guid: 596309bcbe7709d4c81e4d399f789b53, type: 3}
+  - category: 2
+    id: player_ship
+    visual: HealthBar
+    prefab: {fileID: 2340933862856641408, guid: b5b4be58ab76ec146b4751809d5b5747, type: 3}
+  - category: 2
+    id: player_ship
+    visual: Highlight
+    prefab: {fileID: 4324064603990396495, guid: 58ae94dbb89e4134fa9de123d3308d97, type: 3}
+  - category: 2
+    id: player_ship
+    visual: LevelUp
+    prefab: {fileID: 7725820154559589997, guid: e80aa9619a2316140b11d89a565874e4, type: 3}
+  - category: 3
+    id: brine
+    visual: ActiveRing
+    prefab: {fileID: 2420073653489123457, guid: 33e1d5f5873013b4ca4b734b548c74b0, type: 3}
+  - category: 3
+    id: brine
+    visual: ShipLook
+    prefab: {fileID: 2219536023675997620, guid: 3f8a96676c4400b45973da3cfd76ec19, type: 3}
+  - category: 3
+    id: ember
+    visual: ActiveRing
+    prefab: {fileID: 504455968413302041, guid: d771efe8fd1f6984195a40b4a14d2716, type: 3}
+  - category: 3
+    id: ember
+    visual: ShipLook
+    prefab: {fileID: 4914707518102118556, guid: 3a76396511b3fa848b434035493a3e76, type: 3}
+  - category: 3
+    id: flint
+    visual: ActiveRing
+    prefab: {fileID: 8623813571843013168, guid: 58748486e775bc840a1e7fb587bd74b5, type: 3}
+  - category: 3
+    id: flint
+    visual: ShipLook
+    prefab: {fileID: 40198746033482673, guid: 153c8d91744296447b0805dee0ac9348, type: 3}
+  - category: 3
+    id: richie
+    visual: ActiveRing
+    prefab: {fileID: 6493274765821026262, guid: 167aadf145fed2546a9dd4e11ec41925, type: 3}
+  - category: 3
+    id: richie
+    visual: ShipLook
+    prefab: {fileID: 1286646064686698205, guid: b4a6025d52202194f849ac9f36484cc0, type: 3}
+  - category: 3
+    id: rook
+    visual: ActiveRing
+    prefab: {fileID: 8925387636034294655, guid: 7133638a0885c6940a04258ef4c48224, type: 3}
+  - category: 3
+    id: rook
+    visual: ShipLook
+    prefab: {fileID: 6916334801048247329, guid: 0665a551a24d51f44bf00e0b6eda0b7b, type: 3}
+  - category: 3
+    id: roxie
+    visual: ActiveRing
+    prefab: {fileID: 6167166236858575260, guid: ccd2dd1d99718794291670a84acaf4fb, type: 3}
+  - category: 3
+    id: roxie
+    visual: ShipLook
+    prefab: {fileID: 5217461682220099446, guid: 8ccb1acd9bf1d9c428987305bee6f281, type: 3}
+  - category: 4
+    id: gold_barrel
+    visual: Model
+    prefab: {fileID: 4216690112082252620, guid: abfa9c1d65556f3408c18e70a9ebb012, type: 3}
+  - category: 4
+    id: gold_coin
+    visual: Model
+    prefab: {fileID: 4015517974602281327, guid: e2227de6f9985b14e9bd723f8311f3a8, type: 3}
+  - category: 4
+    id: health_barrel
+    visual: Model
+    prefab: {fileID: 8183992546832951624, guid: b5e0441fee2c2954582702ef3df9950a, type: 3}
+  - category: 4
+    id: health_plus
+    visual: Model
+    prefab: {fileID: 7002894754987518540, guid: e261725e5587acc47a26e8a1f81c9481, type: 3}
+  - category: 4
+    id: xp_barrel
+    visual: Model
+    prefab: {fileID: 5986541717153541237, guid: c4feb61c8046a7c479b9b748ba508995, type: 3}
+  - category: 4
+    id: xp_gem
+    visual: Model
+    prefab: {fileID: 175880883102013762, guid: 5ebbf2f58e6f1804f8355a10fa8d7278, type: 3}
+  - category: 5
+    id: battle_signal
+    visual: Model
+    prefab: {fileID: 1515228406631917558, guid: 0f8dab2330045614a9e2b0e5e17650e7, type: 3}
+  - category: 5
+    id: dead_calm
+    visual: Model
+    prefab: {fileID: 3050292433987613900, guid: a6353586fe2a22749ba3057d8ddeb006, type: 3}
+  - category: 5
+    id: full_sail
+    visual: Model
+    prefab: {fileID: 7862252712896841568, guid: f68fd850cc10ee241add3c5a226e3dc1, type: 3}
+  - category: 5
+    id: magnetic_tide
+    visual: Model
+    prefab: {fileID: 411023540606654087, guid: 2273f49e34df709479ea6edd44e159f8, type: 3}
+  - category: 5
+    id: powder_rush
+    visual: Model
+    prefab: {fileID: 4197512782932836554, guid: 768554bcba485cf43bf42a3eacc8d1d0, type: 3}
+  - category: 5
+    id: repair_supplies
+    visual: Model
+    prefab: {fileID: 8775030646346969735, guid: e2c50e0677f6364458e6823709f90a2c, type: 3}
+  - category: 5
+    id: salvage_chime
+    visual: Model
+    prefab: {fileID: 3834844591511776700, guid: 6337c89d53d22434c9f8a228cf5772e1, type: 3}
+  - category: 5
+    id: tailwind
+    visual: Model
+    prefab: {fileID: 5955376128703793586, guid: a756c1e534462b748bbc06148ef905a2, type: 3}
+  - category: 6
+    id: lighthouse_of_fortune
+    visual: Model
+    prefab: {fileID: 1798196872801479414, guid: aa2a7a16eeb6681438eec7e916631ddd, type: 3}
+  - category: 6
+    id: powder_cache
+    visual: Model
+    prefab: {fileID: 5977866536508745395, guid: b545069ce52125447b906c22b0b8485b, type: 3}
+  - category: 6
+    id: repair_wreck
+    visual: Model
+    prefab: {fileID: 6533395514038824030, guid: 5a6019988f6d56a4aaadf49db2cbae8c, type: 3}
+  - category: 6
+    id: salvage_chest
+    visual: Model
+    prefab: {fileID: 4865591457288183969, guid: 39845379ecd7fa145833adf626d056c5, type: 3}
+  - category: 6
+    id: signal_buoy
+    visual: ChargeRing
+    prefab: {fileID: 8595747116494229690, guid: 07ce09360c4c2bd44a9b46c4ef735b9a, type: 3}
+  - category: 6
+    id: signal_buoy
+    visual: Model
+    prefab: {fileID: 7973005631509961391, guid: f37b853dab48d7e4eb4a5c47893397f1, type: 3}
+  - category: 6
+    id: treasure_chart
+    visual: Model
+    prefab: {fileID: 1900847385803950552, guid: 51b31b00bd9548f48969ef4ac2deca4d, type: 3}
+  - category: 6
+    id: treasury_beacon
+    visual: Model
+    prefab: {fileID: 5645157276246372392, guid: 466b9927f34f7b549b2f4bc09918a4ae, type: 3}
+  - category: 6
+    id: treasury_beacon
+    visual: TelegraphRing
+    prefab: {fileID: 8685786796964872958, guid: 044603da865cbd74cb5ff9e9951ecfee, type: 3}
+  - category: 7
+    id: aura_pulse
+    visual: PulseRing
+    prefab: {fileID: 6853738243437671396, guid: 3b772d8b93b3ca04688e65b452ec0424, type: 3}
+  - category: 7
+    id: burning_patch
+    visual: Patch
+    prefab: {fileID: 6516935977336852518, guid: a1d18580d682f944e9f41c81ce435e09, type: 3}
+  - category: 7
+    id: damage_highlight
+    visual: Highlight
+    prefab: {fileID: 665356703522340840, guid: c08359d71c930cf41a647a28c50510e3, type: 3}
+  - category: 7
+    id: damage_number
+    visual: Number
+    prefab: {fileID: 2803975420238423914, guid: 74752190289a6b346976830b992daffa, type: 3}
+  - category: 7
+    id: enemy_blast
+    visual: Blast
+    prefab: {fileID: 5302464663048848391, guid: 581729045557f3f49bf3391fde77efa2, type: 3}
+  - category: 7
+    id: hit
+    visual: CannonImpact
+    prefab: {fileID: 949939692580650625, guid: 1446e9c10b20f0249b8aa3ee70fae46f, type: 3}
+  - category: 7
+    id: hit
+    visual: CritHit
+    prefab: {fileID: 1937442623309191696, guid: 66b71f7adef0c50409ebda8dd5f9ba5a, type: 3}
+  - category: 7
+    id: hit
+    visual: Hit
+    prefab: {fileID: 5294267470867975748, guid: f2be8ab33bd540c42868484ed2c28050, type: 3}
+  - category: 7
+    id: item_blast
+    visual: Blast
+    prefab: {fileID: 4777581415730511726, guid: a1bbac83b6dead14ea091f25054aebbd, type: 3}
+  - category: 7
+    id: item_impact
+    visual: Impact
+    prefab: {fileID: 3623023566700915862, guid: f4287debab31b7f41ab4ec30d3562135, type: 3}
+  - category: 7
+    id: item_ring
+    visual: LandingRing
+    prefab: {fileID: 5263680932385002671, guid: 9fb8a333888eb5842ae6e7623634f510, type: 3}
+  - category: 7
+    id: item_strike
+    visual: Strike
+    prefab: {fileID: 7625039472870125346, guid: 719cf15f6539cc544bbe53a0692a3d3e, type: 3}
+  - category: 7
+    id: kill
+    visual: BossDeath
+    prefab: {fileID: 6035436631450755963, guid: 8fda6cf7f1b23d54b993d0f9d906a314, type: 3}
+  - category: 7
+    id: kill
+    visual: Death
+    prefab: {fileID: 2980410898923983744, guid: 00b3b504bf2a29446b24caa5e94e2e36, type: 3}
+  - category: 7
+    id: kill
+    visual: EliteDeath
+    prefab: {fileID: 5458639587468292715, guid: 1d1ef77e289330348aaa00ae2d6e69b2, type: 3}
+  - category: 7
+    id: mortar_reticle
+    visual: Reticle
+    prefab: {fileID: 194411400988594591, guid: 8963e55526853774f90d4f5da1bbbabe, type: 3}
+  - category: 7
+    id: splash
+    visual: Splash
+    prefab: {fileID: 176540724878825095, guid: 4edead4d151db58438b815d7b4566ae9, type: 3}
+  - category: 7
+    id: vfx_fallback
+    visual: Splash
+    prefab: {fileID: 9131066969481211634, guid: e7a7ee527c704e047ad64116e41f6f8c, type: 3}
+  - category: 8
+    id: bounds_wall
+    visual: Wall
+    prefab: {fileID: 5213020375545034368, guid: ad52671d3a0ae204ea0f1f7d565216bd, type: 3}
+  - category: 8
+    id: interaction_prompt
+    visual: Prompt
+    prefab: {fileID: 6808561129565128467, guid: 93d599ee753ddfb419978a34f39c4aa7, type: 3}
+  - category: 8
+    id: minimap_boss
+    visual: Icon
+    prefab: {fileID: 1180926580900011771, guid: 8061e27fdc58c2e4fb057936257f776f, type: 3}
+  - category: 8
+    id: minimap_boss_beacon
+    visual: Icon
+    prefab: {fileID: 8101735166383138010, guid: c293bd445eef4984b8a6ea4b4a7546ec, type: 3}
+  - category: 8
+    id: minimap_cursed_idol
+    visual: Icon
+    prefab: {fileID: 4188237589561975814, guid: b79d4338ef53507429d7c4022124fe56, type: 3}
+  - category: 8
+    id: minimap_generic_poi
+    visual: Icon
+    prefab: {fileID: 2813502907729685980, guid: f9e9f51e14a478f4194bc4d2df0ad822, type: 3}
+  - category: 8
+    id: minimap_gilded_wreck
+    visual: Icon
+    prefab: {fileID: 6923746737358046298, guid: f051c590c9245694583adbf29396492a, type: 3}
+  - category: 8
+    id: minimap_lighthouse_of_fortune
+    visual: Icon
+    prefab: {fileID: 6925361156875311930, guid: 0f60c90a14cf8b34abf25057245e49a4, type: 3}
+  - category: 8
+    id: minimap_merchant_skiff
+    visual: Icon
+    prefab: {fileID: 2385563300533329182, guid: b7584c1f8d3e8b443a77feca17fc5403, type: 3}
+  - category: 8
+    id: minimap_miniboss
+    visual: Icon
+    prefab: {fileID: 4912963330798026971, guid: 13c02262b46151341afa93ab014f2a72, type: 3}
+  - category: 8
+    id: minimap_player
+    visual: Icon
+    prefab: {fileID: 1225589640905966826, guid: 619246e844782b04790e8c3968a31dc8, type: 3}
+  - category: 8
+    id: minimap_salvage_chest
+    visual: Icon
+    prefab: {fileID: 7289598137462543095, guid: 84cd38bf38ce899469ea4c2eae9c81d6, type: 3}
+  - category: 8
+    id: minimap_trial_buoy
+    visual: Icon
+    prefab: {fileID: 3505515064210282854, guid: 2a3060c23515ac649929a9a21f062804, type: 3}
+  - category: 8
+    id: storm_edge
+    visual: Warning
+    prefab: {fileID: 3961727193751050148, guid: f3091f973bcc30c42a125bdc46ed7c1b, type: 3}
+  - category: 8
+    id: storm_ring
+    visual: Ring
+    prefab: {fileID: 7534532154907171218, guid: 99e1ceeb9a4be6f41b81262bb096c724, type: 3}
+  - category: 8
+    id: threat_arrow
+    visual: Arrow
+    prefab: {fileID: 2727360789308000002, guid: 560d52176143245429fe807bbb650e54, type: 3}
+  - category: 9
+    id: pvp_arrow
+    visual: Arrow
+    prefab: {fileID: 3715083130315328239, guid: 0da0757cf71a4c84aa16cd475a0bb9ee, type: 3}
+  - category: 9
+    id: pvp_health_barrel
+    visual: Barrel
+    prefab: {fileID: 5500108370134641269, guid: 7a8625725023a5643ad999ca5d736307, type: 3}
+  - category: 9
+    id: pvp_opponent
+    visual: HealthBar
+    prefab: {fileID: 430374589466236907, guid: 3fe4d208533d8af47836dc50b4609d71, type: 3}
+  - category: 9
+    id: pvp_opponent
+    visual: Ship
+    prefab: {fileID: 2995467044768137537, guid: dc36859dd02565842a29f1f3232e873d, type: 3}
+  - category: 9
+    id: pvp_shot
+    visual: Ball
+    prefab: {fileID: 3266783324834091758, guid: 4f54596b9af9dc34db2c96186e3617dd, type: 3}
+  - category: 9
+    id: pvp_storm_ring
+    visual: Ring
+    prefab: {fileID: 4630398638889382879, guid: 7ab2003a987030449b0a29c68bd92bab, type: 3}
+  - category: 9
+    id: pvp_xp_barrel
+    visual: Barrel
+    prefab: {fileID: 8565677103439267304, guid: c282ee700257d594782af2b8a3b3a6f9, type: 3}

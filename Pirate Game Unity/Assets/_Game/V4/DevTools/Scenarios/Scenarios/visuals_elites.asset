@@ -1,0 +1,172 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa115c363c73ef24fa57f0fbf8fe6509, type: 3}
+  m_Name: visuals_elites
+  m_EditorClassIdentifier: RoguePirates.V4.DevTools::RoguePirates.V4.DevTools.Scenarios.ScenarioConfig
+  description: 'V5 (visual prefabs): 0:00, no weapons: the specialist and elite variants
+    (bomb ketch, needle sloop, net cutter, powder barge, ram raider, repair tender,
+    shield frigate, elite hammerhead, elite kraken spawn) and a shark with each elite
+    affix look (Armored, Swift, Volatile, Rich, Cursed, Captain): models, health
+    bars. Every visual is a prefab under Assets/_Game/V4/Visuals/Prefabs/<Category>/<id>/
+    (plan/v5/VISUAL-PREFABS.md): edit one, then load this again from the Tuning Console.'
+  seed: 2202
+  captain: {fileID: 0}
+  playtest: 1
+  invulnerable: 1
+  skipLevelUpCards: 1
+  clockSeconds: 0
+  scriptedPhases: 2
+  ambientSpawning: 0
+  triggerPhases: []
+  loadout:
+    replaceWeapons: 1
+    weapons: []
+    logbooks: []
+    items: []
+    playerLevel: 0
+    xpIntoLevel: 0
+  shipStart: 0
+  holdIntoShore: 0
+  enemies:
+  - enemyId: bomb_ketch
+    count: 1
+    distance: 12.85
+    bearing: 20
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: needle_sloop
+    count: 1
+    distance: 15.439241
+    bearing: 60
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: net_cutter
+    count: 1
+    distance: 16.279606
+    bearing: 100
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: powder_barge
+    count: 1
+    distance: 10.231922
+    bearing: 140
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: ram_raider
+    count: 1
+    distance: 8.5
+    bearing: 180
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: repair_tender
+    count: 1
+    distance: 10.231922
+    bearing: 220
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shield_frigate
+    count: 1
+    distance: 16.279606
+    bearing: 260
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: elite_hammerhead
+    count: 1
+    distance: 15.439242
+    bearing: 300
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: elite_kraken_spawn
+    count: 1
+    distance: 12.85
+    bearing: 340
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shark
+    count: 1
+    distance: 6.875
+    bearing: 0
+    spread: 15
+    eliteAffix: 1
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shark
+    count: 1
+    distance: 8.491583
+    bearing: 60
+    spread: 15
+    eliteAffix: 2
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shark
+    count: 1
+    distance: 7.0679355
+    bearing: 120
+    spread: 15
+    eliteAffix: 3
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shark
+    count: 1
+    distance: 4.675
+    bearing: 180
+    spread: 15
+    eliteAffix: 4
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shark
+    count: 1
+    distance: 7.0679364
+    bearing: 240
+    spread: 15
+    eliteAffix: 5
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: shark
+    count: 1
+    distance: 8.491584
+    bearing: 300
+    spread: 15
+    eliteAffix: 6
+    focus: 0
+    hpMultiplier: 400
+  pointsOfInterest: []
+  boss: 0
+  sinkOtherEnemies: 0
+  pickups: []
+  powerups: []
+  configEdits: []
+  pvp:
+    enabled: 0
+    weapons: []
+    logbooks: []
+    countdownSeconds: 1
+    matchSeconds: 6
+    stormStartSeconds: 0

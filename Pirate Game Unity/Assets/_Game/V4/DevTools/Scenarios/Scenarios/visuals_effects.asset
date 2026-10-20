@@ -1,0 +1,107 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa115c363c73ef24fa57f0fbf8fe6509, type: 3}
+  m_Name: visuals_effects
+  m_EditorClassIdentifier: RoguePirates.V4.DevTools::RoguePirates.V4.DevTools.Scenarios.ScenarioConfig
+  description: 'V5 (visual prefabs): 0:00: Deck Cannons, Flamethrower and Powder
+    Kegs at rank 4 with Devil''s Match, Queen Anne''s Fuse, Storm in a Bottle, Leviathan
+    Heart and the Hammerhead Helm, among weak sharks (kills), sturdy cannonboats
+    (enemy shots and splashes), bomb boats (enemy blasts) and a kraken spawn: hit
+    sparks, crits, kill bursts, elite kill, explosions, splashes, damage numbers,
+    burn flashes and the item procs. Every visual is a prefab under Assets/_Game/V4/Visuals/Prefabs/<Category>/<id>/
+    (plan/v5/VISUAL-PREFABS.md): edit one, then load this again from the Tuning Console.'
+  seed: 2206
+  captain: {fileID: 0}
+  playtest: 1
+  invulnerable: 1
+  skipLevelUpCards: 1
+  clockSeconds: 0
+  scriptedPhases: 2
+  ambientSpawning: 0
+  triggerPhases: []
+  loadout:
+    replaceWeapons: 1
+    weapons:
+    - weaponId: deck_cannons
+      level: 4
+      evolutionId: 
+    - weaponId: flamethrower
+      level: 4
+      evolutionId: 
+    - weaponId: powder_kegs
+      level: 4
+      evolutionId: 
+    logbooks: []
+    items:
+    - devils_match
+    - queen_annes_fuse
+    - storm_in_a_bottle
+    - leviathan_heart
+    - hammerhead_helm
+    playerLevel: 0
+    xpIntoLevel: 0
+  shipStart: 0
+  holdIntoShore: 0
+  enemies:
+  - enemyId: shark
+    count: 6
+    distance: 9
+    bearing: 0
+    spread: 25
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 1
+  - enemyId: shark
+    count: 1
+    distance: 8
+    bearing: 180
+    spread: 15
+    eliteAffix: 1
+    focus: 0
+    hpMultiplier: 1
+  - enemyId: cannonboat
+    count: 2
+    distance: 14
+    bearing: 90
+    spread: 20
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  - enemyId: bomb_boat
+    count: 2
+    distance: 12
+    bearing: 270
+    spread: 20
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 1
+  - enemyId: kraken_spawn
+    count: 1
+    distance: 13
+    bearing: 135
+    spread: 15
+    eliteAffix: 0
+    focus: 0
+    hpMultiplier: 400
+  pointsOfInterest: []
+  boss: 0
+  sinkOtherEnemies: 0
+  pickups: []
+  powerups: []
+  configEdits: []
+  pvp:
+    enabled: 0
+    weapons: []
+    logbooks: []
+    countdownSeconds: 1
+    matchSeconds: 6
+    stormStartSeconds: 0
