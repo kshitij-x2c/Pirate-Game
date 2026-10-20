@@ -14,6 +14,9 @@ One session covers everything waiting on a build made after `1a791034`:
 - [ ] **Content back on:** Flamethrower (Ember's start), Lighthouse Lantern, Squid Ink Pots, Siren Bell (Tidal Aura),
       Cursed Chest Key, the four new items and the Chaos logbook card.
 - [ ] **Weapon prefabs:** tweak one weapon's prefab in the Editor and see it in game (`plan/hackathon/WEAPON-PREFABS.md`).
+- [ ] **Visual prefabs (everything else):** enemies, bosses, pickups, powerups, POIs, effects, the ship's Captain looks,
+      the storm and HUD arrows, the 1v1 pieces are editable prefabs now; tweak one and load its `visuals_*` scenario
+      (`plan/v5/VISUAL-PREFABS.md`).
 
 # Now (20 Oct): M9j, the server decides or checks results (plan rev 20)
 

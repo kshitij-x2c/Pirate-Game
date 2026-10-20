@@ -641,6 +641,11 @@
    "when": "20 Oct",
    "commit": "(review fixes)",
    "what": "<strong>M9j code review</strong>: no blockers; fixes deployed (no_log verdicts, staked matches cannot be pre-empted by an early client report, a catch-all on the log check); server 289/291, Hackathon EditMode 52/52."
+  },
+  {
+   "when": "20 Oct",
+   "commit": "9fae3fa8, 48665986",
+   "what": "<strong>M9i visual prefabs</strong>: every non-weapon visual (118 in 10 categories: enemies, bosses, player, Captains, pickups, powerups, POIs, effects, world/HUD, 1v1) now comes from the visual catalog with a VisualTuning; 96 new prefabs under Visuals/Prefabs, 22 art prefabs listed as they are; builder Tools > Rogue Pirates > Visuals; scenarios visuals_*; before/after screenshots within run-to-run noise (plan/v5/VISUAL-PREFABS.md). EditMode 848/848, PlayMode 132/134."
   }
  ],
  "todos": {

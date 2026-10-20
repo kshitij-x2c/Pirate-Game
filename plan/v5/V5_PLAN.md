@@ -855,6 +855,14 @@ known-good base.
   signature is persisted at once, "sent, unknown" kept (no signature: check the wallet before paying again; a late
   signature is still persisted) (`b86d46ad`). Suites: EditMode 839/839, PlayMode 132/134 (the two load probes skip without RP_PROBE_SECONDS), as at `e851dcd3` plus 4 new EditMode tests.
 
+Visual prefabs (20 Oct, owner: "every non-weapon visual from an editable prefab, like the weapons"): 118 visuals in 10
+categories now come from the visual catalog (`Visuals/Resources/V4Visuals.asset`, `VisualCatalog`) with a `VisualTuning`
+for the numbers the code sets: 96 new prefabs under `Assets/_Game/V4/Visuals/Prefabs/<Category>/<id>/` (copies of the
+shared prefabs, or what the code built, saved with its materials) and 22 art-team prefabs listed as they are. Builder
+Tools > Rogue Pirates > Visuals > Build Visual Prefabs (keeps edited prefabs); scenarios `visuals_*`; before/after
+screenshots match within run-to-run noise; EditMode `VisualPrefabsTests`. Presentation only (one Foundation helper keeps
+its look in the Editor). Details and the per-visual list: `plan/v5/VISUAL-PREFABS.md`.
+
 Remaining in M9i:
 - The review's other findings: client-reported PvP hull, raid results and race times (cheap server checks and
   verdicts in M9j; server authority: M13b, M15, M17, M22); NFT vs database ownership (M26); GET rate limits. The MWA sign-and-send path needs the device check below
