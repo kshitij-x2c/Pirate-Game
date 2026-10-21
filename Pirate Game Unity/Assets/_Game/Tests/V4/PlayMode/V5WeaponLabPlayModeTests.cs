@@ -131,6 +131,68 @@ namespace RoguePirates.V4.Tests
             Assert.IsFalse(RunManager.Instance.IsRunEnded, "the voyage is still on");
         }
 
+        /// <summary>Owner (22 Oct): kills drop nothing and the ship takes no damage from anything, a boss included.</summary>
+        [UnityTest]
+        public IEnumerator NoDrops_NoDamage_WhileEnemiesAttack()
+        {
+            yield return LoadLab();
+            Assert.IsTrue(Lab.KillRewardsOff, "the lab switched the kill rewards off");
+            var game = Lab.Game;
+            var ship = Scenario.Current.Ship;
+            var run = RunManager.Instance;
+            var hull = ship.Damage.CurrentHP;
+            Assert.AreEqual(ship.Damage.MaxHP, hull, "the hull starts full");
+            var damaged = 0;
+            System.Action<float, bool> onDamaged = (a, c) => damaged++;
+            ship.Damage.Damaged += onDamaged;
+            var pickups = game.Build.Pickups.ActiveCount;
+            var powerups = game.Build.Powerups.ActiveCount;
+            var gold = run.Gold;
+            var level = game.Build.Progression.Level;
+            try
+            {
+                // A strong weapon among shooters, rammers, bombers and an elite, then the boss: kills, and every attack lands on the ship.
+                var flamethrower = Lab.Weapons.ToList().FindIndex(w => w.weaponId == "flamethrower");
+                Lab.SelectWeapon(flamethrower);
+                for (var guard = 0; !Lab.AtMax && guard < 64; guard++) Lab.LevelUp();
+                Lab.Evolve();
+                var kills = run.KillCount;
+                var sim = V4TestEnemies.Simulation();
+                var shotsSeen = 0;
+                var closest = float.MaxValue;
+                foreach (var id in new[] { "gunner_cog", "rammer_raft", "bomb_boat", "elite_kraken_spawn", "barnacle_king" })
+                {
+                    var index = Lab.Enemies.ToList().FindIndex(e => e.Id == id);
+                    Assert.GreaterOrEqual(index, 0, id + " is in the stream");
+                    Lab.SelectEnemy(index);
+                    var until = Time.time + (id == "barnacle_king" ? 10f : 5f);
+                    while (Time.time < until)
+                    {
+                        Assert.AreEqual(hull, ship.Damage.CurrentHP, $"{id}: the hull never changes");
+                        shotsSeen = Mathf.Max(shotsSeen, game.Shell.Enemies.Services.Shots.ActiveCount);
+                        for (var i = 0; i < sim.Agents.Length; i++)
+                            if (sim.Agents[i].active)
+                            {
+                                var d = sim.Agents[i].position - ship.Position;
+                                d.y = 0f;
+                                closest = Mathf.Min(closest, d.magnitude - sim.Agents[i].radius);
+                            }
+                        yield return null;
+                    }
+                }
+                Assert.Greater(run.KillCount, kills, "the weapon sank some");
+                Assert.Greater(shotsSeen, 0, "enemy shots were in flight at the ship");
+                Assert.Less(closest, 3f, "enemies reached the ship (contact and rams)");
+                Assert.AreEqual(0, damaged, "no Damaged event (no damage number or hit flash on the ship)");
+                Assert.LessOrEqual(game.Build.Pickups.ActiveCount, pickups, "no XP, gold or health dropped");
+                Assert.LessOrEqual(game.Build.Powerups.ActiveCount, powerups, "no powerup dropped");
+                Assert.AreEqual(gold, run.Gold, "no gold");
+                Assert.AreEqual(level, game.Build.Progression.Level, "no XP");
+                Assert.IsTrue(ship.Damage.IsAlive && !run.IsRunEnded, "the voyage goes on");
+            }
+            finally { ship.Damage.Damaged -= onDamaged; }
+        }
+
         [UnityTest]
         public IEnumerator Enemies_CycleTypes_StreamKeepsComing()
         {

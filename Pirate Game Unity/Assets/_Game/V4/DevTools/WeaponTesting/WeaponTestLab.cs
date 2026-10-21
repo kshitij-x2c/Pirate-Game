@@ -114,6 +114,7 @@ namespace RoguePirates.V4.DevTools.WeaponTesting
             if (calibration != null && calibration.spawnDistance > 1f) _spawnDistance = calibration.spawnDistance;
             BuildEnemyList(config);
             QuietTheAimOverlayToggle();
+            SwitchOffKillRewards();
             SelectWeapon(0);
             SelectEnemy(0);
             Debug.Log($"[V5 Weapon Lab] {_weapons.Count} weapons, {_enemies.Count} enemy types" +
@@ -144,6 +145,22 @@ namespace RoguePirates.V4.DevTools.WeaponTesting
             var ordered = _enemies.OrderBy(e => e.Boss ? 3 : e.Miniboss ? 2 : e.Elite ? 1 : 0).ToList();
             _enemies.Clear();
             _enemies.AddRange(ordered);
+        }
+
+        /// <summary>True once kills drop nothing (no XP, gold, health, powerups) in this run.</summary>
+        public bool KillRewardsOff { get; private set; }
+
+        /// <summary>Owner (22 Oct): kills in the lab drop nothing. The kill fan-out's drop and powerup hooks are cleared for
+        /// this run only (XP, gold and coin barrels, the health drop, the elite and boss powerup roll, the Cursed Doubloons'
+        /// extra gold); the kill still counts, publishes Killed and records the weapon's kill. A new run wires them again.</summary>
+        void SwitchOffKillRewards()
+        {
+            var kills = Game.Shell != null && Game.Shell.Enemies != null ? Game.Shell.Enemies.KillTargets : null;
+            if (kills == null) { Debug.LogWarning("[V5 Weapon Lab] no kill fan-out: kills still drop rewards"); return; }
+            kills.SpawnKillDrops = null;
+            kills.RollPowerup = null;
+            kills.WeaponKillGold = null;
+            KillRewardsOff = true;
         }
 
         /// <summary>O is the lab's next weapon; the weapon aim overlay's toggle keeps V and backslash.</summary>
@@ -282,6 +299,8 @@ namespace RoguePirates.V4.DevTools.WeaponTesting
             if (Game == null || run == null || run.IsRunEnded) return;
             HandleKeys();
             SkipChestChoice(run);
+            // The ship takes no damage from anything (the scenario set it; kept on even if the console's God switch went off).
+            if (_ship != null && _ship.Damage != null) _ship.Damage.SetPlaytestInvulnerable(true);
             if (run.IsPaused || !StreamOn || _enemies.Count == 0) return;
             _spawnBudget = Mathf.Min(_spawnBudget + EffectiveRate * Time.deltaTime, 3f);
             while (_spawnBudget >= 1f && Alive < Cap)
@@ -350,6 +369,7 @@ namespace RoguePirates.V4.DevTools.WeaponTesting
                 sb.Append($"Enemy {EnemyIndex + 1}/{_enemies.Count}: <b>{e.Name}</b> ({e.Id}, {e.Kind})\n");
                 sb.Append($"Alive {Alive}/{Cap} · {EffectiveRate:0.##}/s{(StreamOn ? "" : " (off)")}{(_failedSpawns > 0 ? $" · {_failedSpawns} spawns found no water" : "")}\n");
             }
+            sb.Append(KillRewardsOff ? "<size=13>Ship takes no damage · kills drop nothing</size>\n" : "<size=13>Ship takes no damage</size>\n");
             if (!string.IsNullOrEmpty(Message)) sb.Append($"<color=#ffd75e>{Message}</color>\n");
             if (HelpVisible)
                 sb.Append("<size=13>I / O weapon  ·  U level up  ·  P evolve\nK / L enemy  ·  [ / ] stream rate  ·  R reset  ·  H help</size>");

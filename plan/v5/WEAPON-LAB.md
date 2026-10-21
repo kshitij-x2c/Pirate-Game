@@ -15,12 +15,19 @@ development builds only).
 
 What the lab changes in the voyage:
 
-- The ship takes no damage.
+- The ship takes no damage from anything: contact, shots, rams, bombs, mines and hazards, boss attacks, the storm or
+  edge, and island bumps. The hull stays full and no damage number or hit flash shows on the ship. Every hull loss
+  goes through the ship's damage receiver, and the lab keeps that receiver invulnerable every frame. Bumping an island
+  still bounces the ship, and nets still slow it. Neither is damage, and taking them out would change gameplay code.
+- Kills drop nothing (22 Oct, owner): no XP barrels, gold or coin barrels, health drops, powerup drops (elites and
+  boss), or Cursed Doubloons' extra gold. For this run only, the lab clears the kill fan-out's drop and powerup hooks
+  (`EnemyWorldModule.KillTargets.SpawnKillDrops`, `RollPowerup` and `WeaponKillGold`). Kills still count. Gold stays
+  0, and the Captain never levels up.
 - Level-ups give no cards and do not pause.
 - No timeline spawns: no ambient bands, hordes, focus phases, overtime or storm. No boss summon either.
 - Salvage chest prompts are skipped as they come up, because an item would change the weapon you are testing.
-- Everything else is the normal game. The run clock counts, kills drop XP and gold, and you sail with WASD or the
-  arrows, Shift to boost and Space for all guns.
+- Everything else is the normal game. The run clock counts, and you sail with WASD or the arrows, Shift to boost and
+  Space for all guns.
 
 ## Keys
 
@@ -41,6 +48,7 @@ The overlay at the top left, under the Captain portrait, shows:
 
 - the weapon (name, id, behaviour), its level and max, and its evolution (or the evolution P would give)
 - the enemy type (name, id, kind), how many are alive against the cap, and the stream rate
+- "Ship takes no damage · kills drop nothing"
 - the last action's note and the keys
 
 ## The enemy stream
@@ -85,8 +93,10 @@ the next weapons. If a weapon had no evolution, P would say "no evolution for th
 
 ## Notes
 
-- Kills drop XP and gold around the ship. Sail through them to pick them up, or ignore them.
-- The level shown is the weapon's level, not the Captain's.
+- The first screenshots (cutlasses, parrots, mortar, tempest mast, ink pots, monkeys, anchor flail) were taken before
+  drops were switched off, so they show XP barrels and coins piled around the ship. `weapon-lab-no-drops-*.png` show
+  the lab as it is now.
+- The level shown is the weapon's level. The Captain stays at level 1, because kills drop no XP.
 - The voyage uses seed 1 and the saved Captain. The ship starts where the stage puts it.
 
 ## For agents
@@ -99,5 +109,9 @@ the next weapons. If a weapon had no evolution, P would say "no evolution for th
 - `yield return WeaponTestLab.Load();` starts the lab from a PlayMode test without the scene.
   `WeaponTestLab.Current` is the running lab. Its methods match the keys (`NextWeapon`, `LevelUp`, `Evolve`,
   `NextEnemy`...).
-- Test: PlayMode `V5WeaponLabPlayModeTests`. It loads the scene and drives the controller.
+- Test: PlayMode `V5WeaponLabPlayModeTests` (3 tests). It loads the scene and drives the controller.
+  `NoDrops_NoDamage_WhileEnemiesAttack` runs gunner cogs, rammer rafts, bomb boats, elite kraken spawn and the Barnacle
+  King against a maxed, evolved flamethrower. It checks that enemy shots were in flight and enemies reached the ship;
+  that the hull never changed and no Damaged event fired; and that kills dropped no pickups or powerups and gave no
+  gold or XP.
 - Screenshots: `plan/v5/screens/weapon-lab-*.png`.
