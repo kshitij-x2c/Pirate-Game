@@ -517,6 +517,13 @@ namespace RoguePirates.V4.Progression
         public void DevEvolve(string weaponId, string evolutionId) =>
             ApplyOffer(new Offer { Kind = OfferKind.WeaponEvolution, Id = weaponId, EvolutionId = evolutionId, IsWeapon = true });
 
+        /// <summary>V5 Weapon Lab (dev tools): the weapon is no longer evolved (it fires as its base weapon again).</summary>
+        public void DevClearEvolution(string weaponId)
+        {
+            if (weaponId == null || !_evolutions.Remove(weaponId)) return;
+            LoadoutChanged?.Invoke();
+        }
+
         /// <summary>The owned lists and levels the offers read.</summary>
         sealed class OfferState : IOfferState
         {

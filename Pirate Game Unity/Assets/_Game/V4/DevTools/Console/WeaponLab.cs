@@ -50,6 +50,9 @@ namespace RoguePirates.V4.DevTools
         /// <summary>Evolves a weapon as taking its evolution card does.</summary>
         public static void Evolve(V4Game game, string weaponId, string evolutionId) => Levels(game)?.DevEvolve(weaponId, evolutionId);
 
+        /// <summary>V5 Weapon Lab: the weapon fires as its base weapon again.</summary>
+        public static void ClearEvolution(V4Game game, string weaponId) => Levels(game)?.DevClearEvolution(weaponId);
+
         public static bool IsEvolved(V4Game game, string weaponId) => Levels(game)?.EvolutionOf(weaponId) != null;
     }
 }

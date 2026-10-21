@@ -141,6 +141,9 @@ Strike, Coin, PulseRing, Aura, LandingRing, Impact, Lob, Launch, Whirlpool, Summ
 
 ## How to test
 
+- **Weapon Lab** (22 Oct): open `Assets/_Game/Scenes/V4/WeaponLab.unity` and press Play. I / O cycle every weapon,
+  U ranks it up, P evolves it, and K / L pick the enemy type that streams at the ship. Keys and notes:
+  `plan/v5/WEAPON-LAB.md`.
 - **In a voyage**: V4Boot > Set Sail > F1 (Tuning Console) > Weapons > pick the weapon > **Solo**, then **Fire** or
   **+1** (rank up). Edit the weapon's prefab, then start a new voyage, or reload a scenario from the Tuning Console.
 - **Scenarios** (Tuning Console > Scenarios), all at rank 8, invulnerable, among sturdy sharks:
